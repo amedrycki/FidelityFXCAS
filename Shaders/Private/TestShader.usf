@@ -1,0 +1,315 @@
+// Simple pass-through vertex shader
+
+void MainVS(
+	in float4 InPosition : ATTRIBUTE0,
+	out float4 Output : SV_POSITION
+)
+{
+	Output = InPosition;
+}
+
+// Simple solid color pixel shader
+float4 MyColor;
+float4 MainPS() : SV_Target0
+{
+	return MyColor;
+}
+
+
+
+
+#define INPUT_TYPE float4
+#define OUTPUT_TYPE float4
+
+Texture2D<INPUT_TYPE> Input;
+RWTexture2D<OUTPUT_TYPE> Output;
+
+
+[numthreads(32, 32, 1)]
+void MainCS(uint3 GlobalThreadIndex : SV_DispatchThreadID)
+{
+    const int3 InputIndex = int3(GlobalThreadIndex.xy, 0);
+    const int2 OutputIndex = InputIndex.xy;
+
+    float4 InputValue = Input.Load(InputIndex);
+    //Output[OutputIndex] = InputValue.x;
+	Output[OutputIndex] = float4(1.0, 0.0, 1.0, 1.0);
+}
+
+
+
+
+
+
+
+
+// VERTEX SHADER
+////////////////
+
+void MainVertexShader(float4 InPosition : ATTRIBUTE0, float2 InUV : ATTRIBUTE1, out float2 OutUV : TEXCOORD0, out float4 OutPosition : SV_POSITION)
+{
+	OutPosition = InPosition;
+	OutUV = InUV;
+}
+
+// PIXEL SHADER
+///////////////
+
+//Texture2D<uint> ComputeShaderOutput;
+Texture2D<float4> ComputeShaderOutput;
+float4 StartColor;
+float4 EndColor;
+float2 TextureSize;
+float BlendFactor;
+
+void MainPixelShader(in float2 uv : TEXCOORD0, out float4 OutColor : SV_Target0)
+{
+/*
+	// First we need to unpack the uint material and retrieve the underlying R8G8B8A8_UINT values.
+	uint packedValue = ComputeShaderOutput.Load(int3(TextureSize.x * uv.x, TextureSize.y * uv.y, 0));
+	uint r = (packedValue & 0x000000FF);
+	uint g = (packedValue & 0x0000FF00) >> 8;
+	uint b = (packedValue & 0x00FF0000) >> 16;
+	uint a = (packedValue & 0xFF000000) >> 24;
+	
+	// Here we will just blend using the TextureParameterBlendFactor between our simple color change shader and the input from the compute shader
+	float alpha = length(uv) / length(float2(1, 1));
+	float4 solidColorComponent = lerp(StartColor, EndColor, alpha) * (1.0 - BlendFactor);
+	float4 computeShaderComponent = float4(r, g, b, a) / 255.0 * BlendFactor;
+	OutColor = solidColorComponent + computeShaderComponent;
+	*/
+	
+	OutColor = ComputeShaderOutput.Load(int3(TextureSize.x * uv.x, TextureSize.y * uv.y, 0));
+	//OutColor = float4(0.0, 1.0, 0.0, 1.0);
+}
+
+
+
+
+
+
+Texture2D<float4> InputTexture;
+
+
+
+
+
+// Base shader origin:
+// https://www.shadertoy.com/view/MdXSzS
+// The Big Bang - just a small explosion somewhere in a massive Galaxy of Universes.
+// Outside of this there's a massive galaxy of 'Galaxy of Universes'... etc etc. :D
+//
+// HLSL translation and parameterization by Temaran
+
+
+//RWTexture2D<uint> OutputTexture;
+RWTexture2D<float4> OutputTexture;
+//float2 TextureSize;
+float SimulationState;
+
+[numthreads(32, 32, 1)]
+//[numthreads(THREADGROUPSIZE_X, THREADGROUPSIZE_Y, THREADGROUPSIZE_Z)]
+void MainComputeShader(uint3 ThreadId : SV_DispatchThreadID)
+{
+	float3 TexColor = InputTexture.Load(int3(ThreadId.x, ThreadId.y, 0)).rgb;
+	//float3 TexColor = InputTexture.Load(int3(0, 0, 0)).rgb;
+	OutputTexture[ThreadId.xy] = float4(TexColor.r, 0.0, 0.0, 1.0);
+	
+}
+
+
+
+
+/*
+[numthreads(32. 32, 1)]
+//[numthreads(THREADGROUPSIZE_X, THREADGROUPSIZE_Y, THREADGROUPSIZE_Z)]
+void MainComputeShader(uint3 ThreadId : SV_DispatchThreadID)
+{
+
+	// Set up some variables we are going to need
+	float2 iResolution = float2(TextureSize.x, TextureSize.y);
+	float2 uv = (ThreadId.xy / iResolution.xy) - 0.5;
+	float iGlobalTime = SimulationState;
+
+	// This shader code is from www.shadertoy.com, converted to HLSL by me. If you have not checked out shadertoy yet, you REALLY should!!
+	float t = iGlobalTime * 0.1 + ((0.25 + 0.05 * sin(iGlobalTime * 0.1)) / (length(uv.xy) + 0.07)) * 2.2;
+	float si = sin(t);
+	float co = cos(t);
+	float2x2 ma = { co, si, -si, co };
+
+	float v1, v2, v3;
+	v1 = v2 = v3 = 0.0;
+
+	float s = 0.0;
+	for (int i = 0; i < 90; i++)
+	{
+		float3 p = s * float3(uv, 0.0);
+		p.xy = mul(p.xy, ma);
+		p += float3(0.22, 0.3, s - 1.5 - sin(iGlobalTime * 0.13) * 0.1);
+		
+		for (int i = 0; i < 8; i++)	
+			p = abs(p) / dot(p, p) - 0.659;
+
+		v1 += dot(p, p) * 0.0015 * (1.8 + sin(length(uv.xy * 13.0) + 0.5 - iGlobalTime * 0.2));
+		v2 += dot(p, p) * 0.0013 * (1.5 + sin(length(uv.xy * 14.5) + 1.2 - iGlobalTime * 0.3));
+		v3 += length(p.xy * 10.0) * 0.0003;
+		s += 0.035;
+	}
+
+	float len = length(uv);
+	v1 *= lerp(0.7, 0.0, len);
+	v2 *= lerp(0.5, 0.0, len);
+	v3 *= lerp(0.9, 0.0, len);
+
+	float3 col = float3(v3 * (1.5 + sin(iGlobalTime * 0.2) * 0.4), (v1 + v3) * 0.3, v2)
+					+ lerp(0.2, 0.0, len) * 0.85
+					+ lerp(0.0, 0.6, v3) * 0.3;
+
+	float3 powered = pow(abs(col), float3(1.2, 1.2, 1.2));
+	float3 minimized = min(powered, 1.0);
+	float4 outputColor = float4(minimized, 1.0);
+
+	
+	
+	
+	// TEST
+	//float4 outputColor = float4(1.0, 1.0, 0.0, 1.0);
+	
+	
+
+	// Since there are limitations on operations that can be done on certain formats when using compute shaders
+	// I elected to go with the most flexible one (UINT 32bit) and do my packing manually to simulate an R8G8B8A8_UINT format.
+	// There might be better ways to do this :)
+	uint r = outputColor.r * 255.0;
+	uint g = ((uint)(outputColor.g * 255.0)) << 8;
+	uint b = ((uint)(outputColor.b * 255.0)) << 16;
+	uint a = ((uint)(outputColor.a * 255.0)) << 24;
+	
+	OutputTexture[ThreadId.xy] = r | g | b | a;
+
+}
+*/
+
+
+
+
+
+
+//////////////////////////////////////
+// CAS
+//////////////////////////////////////
+
+
+
+#define CAS_SAMPLE_FP16 0
+#define CAS_SAMPLE_SHARPEN_ONLY 1
+
+
+#include "/Engine/Private/Common.ush"
+//cbuffer cb : register(b0)
+//{
+//    uint4 const0;
+//    uint4 const1;
+//};
+uint4 const0;
+uint4 const1;
+
+
+//Texture2D InputTexture;
+//RWTexture2D<float4> OutputTexture;
+
+#define A_GPU 1
+#define A_HLSL 1
+
+#if CAS_SAMPLE_FP16
+
+#define A_HALF 1
+#define CAS_PACKED_ONLY 1
+
+#endif
+
+#include "ffx_a.ush"
+
+#if CAS_SAMPLE_FP16
+
+AH3 CasLoadH(ASW2 p)
+{
+    return InputTexture.Load(ASU3(p, 0)).rgb;
+}
+
+// Lets you transform input from the load into a linear color space between 0 and 1. See ffx_cas.h
+// In this case, our input is already linear and between 0 and 1
+void CasInputH(inout AH2 r, inout AH2 g, inout AH2 b) {}
+
+#else
+
+AF3 CasLoad(ASU2 p)
+{
+    return InputTexture.Load(int3(p, 0)).rgb;
+}
+
+// Lets you transform input from the load into a linear color space between 0 and 1. See ffx_cas.h
+// In this case, our input is already linear and between 0 and 1
+void CasInput(inout AF1 r, inout AF1 g, inout AF1 b) {}
+
+#endif
+
+#include "ffx_cas.ush"
+
+//[numthreads(WIDTH, HEIGHT, DEPTH)]
+[numthreads(64, 1, 1)]
+void mainCS(uint3 LocalThreadId : SV_GroupThreadID, uint3 WorkGroupId : SV_GroupID)
+{
+    // Do remapping of local xy in workgroup for a more PS-like swizzle pattern.
+    AU2 gxy = ARmp8x8(LocalThreadId.x) + AU2(WorkGroupId.x << 4u, WorkGroupId.y << 4u);
+
+    bool sharpenOnly;
+#if CAS_SAMPLE_SHARPEN_ONLY
+    sharpenOnly = true;
+#else
+    sharpenOnly = false;
+#endif
+
+#if CAS_SAMPLE_FP16
+    
+    // Filter.
+    AH4 c0, c1;
+    AH2 cR, cG, cB;
+    
+    CasFilterH(cR, cG, cB, gxy, const0, const1, sharpenOnly);
+    CasDepack(c0, c1, cR, cG, cB);
+    OutputTexture[ASU2(gxy)] = AF4(c0);
+    OutputTexture[ASU2(gxy) + ASU2(8, 0)] = AF4(c1);
+    gxy.y += 8u;
+    
+    CasFilterH(cR, cG, cB, gxy, const0, const1, sharpenOnly);
+    CasDepack(c0, c1, cR, cG, cB);
+    OutputTexture[ASU2(gxy)] = AF4(c0);
+    OutputTexture[ASU2(gxy) + ASU2(8, 0)] = AF4(c1);
+    
+#else
+    
+    // Filter.
+    AF3 c;
+    
+    CasFilter(c.r, c.g, c.b, gxy, const0, const1, sharpenOnly);
+    OutputTexture[ASU2(gxy)] = AF4(c, 1);
+    gxy.x += 8u;
+    
+    CasFilter(c.r, c.g, c.b, gxy, const0, const1, sharpenOnly);
+    OutputTexture[ASU2(gxy)] = AF4(c, 1);
+    gxy.y += 8u;
+    
+    CasFilter(c.r, c.g, c.b, gxy, const0, const1, sharpenOnly);
+    OutputTexture[ASU2(gxy)] = AF4(c, 1);
+    gxy.x -= 8u;
+    
+    CasFilter(c.r, c.g, c.b, gxy, const0, const1, sharpenOnly);
+    OutputTexture[ASU2(gxy)] = AF4(c, 1);
+    
+#endif
+}
+
+
+
+
