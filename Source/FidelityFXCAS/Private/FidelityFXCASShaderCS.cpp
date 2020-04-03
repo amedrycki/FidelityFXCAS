@@ -53,3 +53,51 @@ void TFidelityFXCASShaderCS<FP16, SHARPEN_ONLY>::ModifyCompilationEnvironment(co
 	OutEnvironment.SetDefine(TEXT("CAS_SAMPLE_FP16"), FP16 ? 1 : 0);
 	OutEnvironment.SetDefine(TEXT("CAS_SAMPLE_SHARPEN_ONLY"), SHARPEN_ONLY ? 1 : 0);
 }
+
+//-------------------------------------------------------------------------------------------------
+// RDG Version
+//-------------------------------------------------------------------------------------------------
+
+IMPLEMENT_SHADER_TYPE(FIDELITYFXCAS_API, FFidelityFXCASShaderCS_RDG, TEXT("/Plugin/FidelityFXCAS/Private/CAS_Shader.usf"), TEXT("mainCS"), SF_Compute);
+
+typedef TFidelityFXCASShaderCS_RDG<0, 0> TFidelityFXCASShaderCS_RDG_0_0;
+typedef TFidelityFXCASShaderCS_RDG<0, 1> TFidelityFXCASShaderCS_RDG_0_1;
+typedef TFidelityFXCASShaderCS_RDG<1, 0> TFidelityFXCASShaderCS_RDG_1_0;
+typedef TFidelityFXCASShaderCS_RDG<1, 1> TFidelityFXCASShaderCS_RDG_1_1;
+
+IMPLEMENT_SHADER_TYPE(template<> FIDELITYFXCAS_API, TFidelityFXCASShaderCS_RDG_0_0, TEXT("/Plugin/FidelityFXCAS/Private/CAS_Shader.usf"), TEXT("mainCS"), SF_Compute);
+IMPLEMENT_SHADER_TYPE(template<> FIDELITYFXCAS_API, TFidelityFXCASShaderCS_RDG_0_1, TEXT("/Plugin/FidelityFXCAS/Private/CAS_Shader.usf"), TEXT("mainCS"), SF_Compute);
+IMPLEMENT_SHADER_TYPE(template<> FIDELITYFXCAS_API, TFidelityFXCASShaderCS_RDG_1_0, TEXT("/Plugin/FidelityFXCAS/Private/CAS_Shader.usf"), TEXT("mainCS"), SF_Compute);
+IMPLEMENT_SHADER_TYPE(template<> FIDELITYFXCAS_API, TFidelityFXCASShaderCS_RDG_1_1, TEXT("/Plugin/FidelityFXCAS/Private/CAS_Shader.usf"), TEXT("mainCS"), SF_Compute);
+
+bool FFidelityFXCASShaderCS_RDG::ShouldCompilePermutation(const FGlobalShaderPermutationParameters& Parameters)
+{
+	return IsFeatureLevelSupported(Parameters.Platform, ERHIFeatureLevel::SM5);
+}
+
+void FFidelityFXCASShaderCS_RDG::ModifyCompilationEnvironment(const FGlobalShaderPermutationParameters& Parameters, FShaderCompilerEnvironment& OutEnvironment)
+{
+	FGlobalShader::ModifyCompilationEnvironment(Parameters, OutEnvironment);
+
+	//OutEnvironment.SetDefine(TEXT("CAS_SAMPLE_FP16"), 0);
+	//OutEnvironment.SetDefine(TEXT("CAS_SAMPLE_SHARPEN_ONLY"), 1);
+
+	OutEnvironment.SetDefine(TEXT("WIDTH"), 64);
+	OutEnvironment.SetDefine(TEXT("HEIGHT"), 1);
+	OutEnvironment.SetDefine(TEXT("DEPTH"), 1);
+}
+
+template<bool FP16, bool SHARPEN_ONLY>
+bool TFidelityFXCASShaderCS_RDG<FP16, SHARPEN_ONLY>::ShouldCompilePermutation(const FGlobalShaderPermutationParameters& Parameters)
+{
+	return FFidelityFXCASShaderCS_RDG::ShouldCompilePermutation(Parameters);
+}
+
+template<bool FP16, bool SHARPEN_ONLY>
+void TFidelityFXCASShaderCS_RDG<FP16, SHARPEN_ONLY>::ModifyCompilationEnvironment(const FGlobalShaderPermutationParameters& Parameters, FShaderCompilerEnvironment& OutEnvironment)
+{
+	FFidelityFXCASShaderCS_RDG::ModifyCompilationEnvironment(Parameters, OutEnvironment);
+
+	OutEnvironment.SetDefine(TEXT("CAS_SAMPLE_FP16"), FP16 ? 1 : 0);
+	OutEnvironment.SetDefine(TEXT("CAS_SAMPLE_SHARPEN_ONLY"), SHARPEN_ONLY ? 1 : 0);
+}
