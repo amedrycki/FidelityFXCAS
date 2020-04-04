@@ -42,8 +42,9 @@ protected:
 	bool bUseFP16 = false;
 
 	// Compute shader output
-	TRefCountPtr<IPooledRenderTarget> ComputeShaderOutput;
-	void PrepareComputeShaderOutput(FRHICommandListImmediate& RHICmdList, const FIntPoint& OutputSize);
+	TRefCountPtr<IPooledRenderTarget> ComputeShaderOutput_RHI;
+	TRefCountPtr<IPooledRenderTarget> ComputeShaderOutput_RDG;
+	void PrepareComputeShaderOutput(FRHICommandListImmediate& RHICmdList, const FIntPoint& OutputSize, TRefCountPtr<IPooledRenderTarget>& CSOutput);
 
 	// SSCAS (no upscale) using Renderer's ResolvedSceneColor callback (RHI)
 	FDelegateHandle OnResolvedSceneColorHandle;	// Post process render pipeline hook and handle
@@ -55,6 +56,7 @@ protected:
 	// Compute shader call
 	void RunComputeShader_RHI_RenderThread(FRHICommandListImmediate& RHICmdList, const struct FFidelityFXDrawParams& DrawParams);
 	void RunComputeShader_RDG_RenderThread(FRDGBuilder& GraphBuilder, const struct FFidelityFXDrawParams_RDG& DrawParams);
+	static FIntVector GetDispatchGroupCount(FIntPoint OutputSize);
 
 	// Pixel shader draw
 	void DrawToRenderTarget_RHI_RenderThread(FRHICommandListImmediate& RHICmdList, const struct FFidelityFXDrawParams& DrawParams);

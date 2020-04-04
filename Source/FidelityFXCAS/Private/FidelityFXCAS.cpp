@@ -25,7 +25,7 @@
 //-------------------------------------------------------------------------------------------------
 static TAutoConsoleVariable<int32> CVarFidelityFXCAS_DisplayInfo(
 	TEXT("r.fxcas.DisplayInfo"),
-	0,
+	1,
 	TEXT("Enables onscreen inormation display for AMD FidelityFX CAS plugin.\n")
 	TEXT("<=0: OFF (default)\n")
 	TEXT(" >0: ON"),
@@ -367,31 +367,31 @@ FTextureRHIRef FFidelityFXDrawParams_RDG::EMPTY_TextureRHIRef;
 FSceneRenderTargetItem FFidelityFXDrawParams_RDG::EMPTY_SceneRenderTargetItem;
 FUnorderedAccessViewRHIRef FFidelityFXDrawParams_RDG::EMPTY_UnorderedAccessViewRHIRef;
 
-void FFidelityFXCASModule::PrepareComputeShaderOutput(FRHICommandListImmediate& RHICmdList, const FIntPoint& OutputSize)
+void FFidelityFXCASModule::PrepareComputeShaderOutput(FRHICommandListImmediate& RHICmdList, const FIntPoint& OutputSize, TRefCountPtr<IPooledRenderTarget>& CSOutput)
 {
 	bool NeedsRecreate = false;
-	if (ComputeShaderOutput.IsValid())
+	if (CSOutput.IsValid())
 	{
 		// Check size if already exists
-		FRHITexture2D* RHITexture2D = ComputeShaderOutput->GetRenderTargetItem().TargetableTexture->GetTexture2D();
+		FRHITexture2D* RHITexture2D = CSOutput->GetRenderTargetItem().TargetableTexture->GetTexture2D();
 		FIntPoint CurrentSize = RHITexture2D->GetSizeXY();
 		if (CurrentSize != OutputSize)
 		{
 			// Release the shader output if the size changed
-			//GEngine->AddOnScreenDebugMessage(INDEX_NONE, 5.f, FColor::Red, FString::Printf(TEXT("Releasing ComputeShaderOutput [%dx%d]..."), CurrentSize.X, CurrentSize.Y));
-			//GRenderTargetPool.FreeUnusedResource(ComputeShaderOutput);
+			//GEngine->AddOnScreenDebugMessage(INDEX_NONE, 5.f, FColor::Red, FString::Printf(TEXT("Releasing compute shader output [%dx%d]..."), CurrentSize.X, CurrentSize.Y));
+			//GRenderTargetPool.FreeUnusedResource(CSOutput);
 			NeedsRecreate = true;
 		}
 	}
 
 	// Create the shader output
-	if (!ComputeShaderOutput.IsValid() || NeedsRecreate)
+	if (!CSOutput.IsValid() || NeedsRecreate)
 	{
-		GEngine->AddOnScreenDebugMessage(INDEX_NONE, 5.f, FColor::Green, FString::Printf(TEXT("Creating ComputeShaderOutput [%dx%d]..."), OutputSize.X, OutputSize.Y));
-		FPooledRenderTargetDesc ComputeShaderOutputDesc(FPooledRenderTargetDesc::Create2DDesc(OutputSize, PF_FloatRGBA, FClearValueBinding::None,
+		GEngine->AddOnScreenDebugMessage(INDEX_NONE, 5.f, FColor::Green, FString::Printf(TEXT("Creating compute shader output [%dx%d]..."), OutputSize.X, OutputSize.Y));
+		FPooledRenderTargetDesc CSOutputDesc(FPooledRenderTargetDesc::Create2DDesc(OutputSize, PF_FloatRGBA, FClearValueBinding::None,
 			TexCreate_None, TexCreate_ShaderResource | TexCreate_UAV, false));
-		ComputeShaderOutputDesc.DebugName = TEXT("FidelityFXCASModule_ComputeShaderOutput");
-		GRenderTargetPool.FindFreeElement(RHICmdList, ComputeShaderOutputDesc, ComputeShaderOutput, TEXT("FidelityFXCASModule_ComputeShaderOutput"));
+		CSOutputDesc.DebugName = TEXT("FidelityFXCASModule_ComputeShaderOutput");
+		GRenderTargetPool.FindFreeElement(RHICmdList, CSOutputDesc, CSOutput, TEXT("FidelityFXCASModule_ComputeShaderOutput"));
 	}
 }
 
@@ -415,8 +415,8 @@ void FFidelityFXCASModule::OnResolvedSceneColor_RenderThread(FRHICommandListImme
 	SetSSCASResolutionInfo(DrawParams.InputSize, DrawParams.OutputSize);
 
 	// Make sure the computer shader output is ready and with correct size
-	PrepareComputeShaderOutput(RHICmdList, DrawParams.OutputSize);
-	DrawParams.ComputeShaderOutput = ComputeShaderOutput;
+	PrepareComputeShaderOutput(RHICmdList, DrawParams.OutputSize, ComputeShaderOutput_RHI);
+	DrawParams.ComputeShaderOutput = ComputeShaderOutput_RHI;
 
 	// Call shaders
 	RunComputeShader_RHI_RenderThread(RHICmdList, DrawParams);
@@ -436,8 +436,8 @@ void FFidelityFXCASModule::OnAddUpscalePass_RenderThread(FRDGBuilder& GraphBuild
 	SetSSCASResolutionInfo(DrawParams.InputSize, DrawParams.OutputSize);
 
 	// Make sure the computer shader output is ready and with correct size
-	PrepareComputeShaderOutput(GraphBuilder.RHICmdList, DrawParams.OutputSize);
-	DrawParams.ComputeShaderOutput = ComputeShaderOutput;
+	PrepareComputeShaderOutput(GraphBuilder.RHICmdList, DrawParams.OutputSize, ComputeShaderOutput_RDG);
+	DrawParams.ComputeShaderOutput = ComputeShaderOutput_RDG;
 
 	// Call shaders
 	RunComputeShader_RDG_RenderThread(GraphBuilder, DrawParams);
@@ -463,25 +463,27 @@ void FFidelityFXCASModule::RunComputeShader_RHI_RenderThread(FRHICommandListImme
 
 	// Choose shader version and dispatch
 	bool SharpenOnly = (DrawParams.InputSize == DrawParams.OutputSize);
+	if (CVarFidelityFXCAS_SSCASNoUpscale.GetValueOnGameThread() > 0)
+		SharpenOnly = true;
 	if (bUseFP16 && SharpenOnly)
 	{
 		TShaderMapRef<TFidelityFXCASShaderCS<true, true>> ComputeShader(GetGlobalShaderMap(GMaxRHIFeatureLevel));
-		FComputeShaderUtils::Dispatch(RHICmdList, *ComputeShader, PassParameters, FIntVector(DrawParams.OutputSize.X, DrawParams.OutputSize.Y, 1));
+		FComputeShaderUtils::Dispatch(RHICmdList, *ComputeShader, PassParameters, GetDispatchGroupCount(DrawParams.OutputSize));
 	}
 	else if (SharpenOnly)
 	{
 		TShaderMapRef<TFidelityFXCASShaderCS<false, true>> ComputeShader(GetGlobalShaderMap(GMaxRHIFeatureLevel));
-		FComputeShaderUtils::Dispatch(RHICmdList, *ComputeShader, PassParameters, FIntVector(DrawParams.OutputSize.X, DrawParams.OutputSize.Y, 1));
+		FComputeShaderUtils::Dispatch(RHICmdList, *ComputeShader, PassParameters, GetDispatchGroupCount(DrawParams.OutputSize));
 	}
 	else if (bUseFP16)
 	{
 		TShaderMapRef<TFidelityFXCASShaderCS<true, false>> ComputeShader(GetGlobalShaderMap(GMaxRHIFeatureLevel));
-		FComputeShaderUtils::Dispatch(RHICmdList, *ComputeShader, PassParameters, FIntVector(DrawParams.OutputSize.X, DrawParams.OutputSize.Y, 1));
+		FComputeShaderUtils::Dispatch(RHICmdList, *ComputeShader, PassParameters, GetDispatchGroupCount(DrawParams.OutputSize));
 	}
 	else
 	{
 		TShaderMapRef<TFidelityFXCASShaderCS<false, false>> ComputeShader(GetGlobalShaderMap(GMaxRHIFeatureLevel));
-		FComputeShaderUtils::Dispatch(RHICmdList, *ComputeShader, PassParameters, FIntVector(DrawParams.OutputSize.X, DrawParams.OutputSize.Y, 1));
+		FComputeShaderUtils::Dispatch(RHICmdList, *ComputeShader, PassParameters, GetDispatchGroupCount(DrawParams.OutputSize));
 	}
 }
 
@@ -508,29 +510,39 @@ void FFidelityFXCASModule::RunComputeShader_RDG_RenderThread(FRDGBuilder& GraphB
 		TShaderMapRef<TFidelityFXCASShaderCS_RDG<true, true>> ComputeShader(GetGlobalShaderMap(GMaxRHIFeatureLevel));
 		FComputeShaderUtils::AddPass(GraphBuilder,
 			RDG_EVENT_NAME("Upscale CS %dx%d -> %dx%d", DrawParams.InputSize.X, DrawParams.InputSize.Y, DrawParams.OutputSize.X, DrawParams.OutputSize.Y),
-			*ComputeShader, PassParameters, FIntVector(DrawParams.OutputSize.X, DrawParams.OutputSize.Y, 1));
+			*ComputeShader, PassParameters, GetDispatchGroupCount(DrawParams.OutputSize));
 	}
 	else if (SharpenOnly)
 	{
 		TShaderMapRef<TFidelityFXCASShaderCS_RDG<false, true>> ComputeShader(GetGlobalShaderMap(GMaxRHIFeatureLevel));
 		FComputeShaderUtils::AddPass(GraphBuilder,
 			RDG_EVENT_NAME("Upscale CS %dx%d -> %dx%d", DrawParams.InputSize.X, DrawParams.InputSize.Y, DrawParams.OutputSize.X, DrawParams.OutputSize.Y),
-			*ComputeShader, PassParameters, FIntVector(DrawParams.OutputSize.X, DrawParams.OutputSize.Y, 1));
+			*ComputeShader, PassParameters, GetDispatchGroupCount(DrawParams.OutputSize));
 	}
 	else if (bUseFP16)
 	{
 		TShaderMapRef<TFidelityFXCASShaderCS_RDG<true, false>> ComputeShader(GetGlobalShaderMap(GMaxRHIFeatureLevel));
 		FComputeShaderUtils::AddPass(GraphBuilder,
 			RDG_EVENT_NAME("Upscale CS %dx%d -> %dx%d", DrawParams.InputSize.X, DrawParams.InputSize.Y, DrawParams.OutputSize.X, DrawParams.OutputSize.Y),
-			*ComputeShader, PassParameters, FIntVector(DrawParams.OutputSize.X, DrawParams.OutputSize.Y, 1));
+			*ComputeShader, PassParameters, GetDispatchGroupCount(DrawParams.OutputSize));
 	}
 	else
 	{
 		TShaderMapRef<TFidelityFXCASShaderCS_RDG<false, false>> ComputeShader(GetGlobalShaderMap(GMaxRHIFeatureLevel));
 		FComputeShaderUtils::AddPass(GraphBuilder,
 			RDG_EVENT_NAME("Upscale CS %dx%d -> %dx%d", DrawParams.InputSize.X, DrawParams.InputSize.Y, DrawParams.OutputSize.X, DrawParams.OutputSize.Y),
-			*ComputeShader, PassParameters, FIntVector(DrawParams.OutputSize.X, DrawParams.OutputSize.Y, 1));
+			*ComputeShader, PassParameters, GetDispatchGroupCount(DrawParams.OutputSize));
 	}
+}
+
+FIntVector FFidelityFXCASModule::GetDispatchGroupCount(FIntPoint OutputSize)
+{
+	// This value is the image region dim that each thread group of the CAS shader operates on
+	static const int32 ThreadGroupWorkRegionDim = 16;
+	FIntVector DispatchGroupCount(0, 0, 1);
+	DispatchGroupCount.X = (OutputSize.X + (ThreadGroupWorkRegionDim - 1)) / ThreadGroupWorkRegionDim;
+	DispatchGroupCount.Y = (OutputSize.Y + (ThreadGroupWorkRegionDim - 1)) / ThreadGroupWorkRegionDim;
+	return DispatchGroupCount;
 }
 
 void FFidelityFXCASModule::DrawToRenderTarget_RHI_RenderThread(FRHICommandListImmediate& RHICmdList, const struct FFidelityFXDrawParams& DrawParams)
