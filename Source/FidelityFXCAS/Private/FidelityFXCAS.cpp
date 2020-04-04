@@ -47,6 +47,22 @@ static TAutoConsoleVariable<float> CVarFidelityFXCAS_SSCASSharpness(
 	TEXT("1: maximum (higher ringing)"),
 	ECVF_Cheat);
 
+static TAutoConsoleVariable<int32> CVarFidelityFXCAS_SSCASFP16(
+	TEXT("r.fxcas.SSCASFP16"),
+	0,
+	TEXT("Should the screen space CAS use half precision floats.\n")
+	TEXT("<=0: OFF (normal precision)\n")
+	TEXT(">0: ON (half precision)"),
+	ECVF_Cheat);
+
+static TAutoConsoleVariable<int32> CVarFidelityFXCAS_SSCASNoUpscale(
+	TEXT("r.fxcas.SSCASNoUpscale"),
+	0,
+	TEXT("Test variable to disable upscaling.\n")
+	TEXT("<=0: OFF (with upscaling)\n")
+	TEXT(">0: ON (no upscaling)"),
+	ECVF_Cheat);
+
 // Sink to track console variables value changes
 static void FidelityFXCASCVarSink()
 {
@@ -96,13 +112,22 @@ static void FidelityFXCASCVarSink()
 		GSSCAS = bNewSSCAS;
 	}
 
-	// SS CAS Sharpness
+	// SS CAS sharpness
 	static float GSSCASSharpness = 0.0f;
 	float NewSSCASSharpness = FMath::Clamp(CVarFidelityFXCAS_SSCASSharpness.GetValueOnGameThread(), 0.0f, 1.0f);
 	if (!FMath::IsNearlyEqual(NewSSCASSharpness, GSSCASSharpness))
 	{
 		FFidelityFXCASModule::Get().SetSSCASSharpness(NewSSCASSharpness);
 		GSSCASSharpness = NewSSCASSharpness;
+	}
+
+	// SS CAS half precision
+	static bool GSSCASFP16 = false;
+	bool bNewSSCASFP16 = CVarFidelityFXCAS_SSCASFP16.GetValueOnGameThread() > 0;
+	if (bNewSSCASFP16 != GSSCASFP16)
+	{
+		FFidelityFXCASModule::Get().SetUseFP16(bNewSSCASFP16);
+		GSSCASFP16 = bNewSSCASFP16;
 	}
 
 	// Screen percentage
@@ -113,7 +138,7 @@ static void FidelityFXCASCVarSink()
 		float NewScreenPercentage = CVarScreenPercentage->GetValueOnAnyThread();
 		if (NewScreenPercentage != GScreenPercentage)
 		{
-			GEngine->AddOnScreenDebugMessage(INDEX_NONE, 5.f, FColor::Emerald, FString::Printf(TEXT("Screen percentage changed: %.2f -> %.2f."), GScreenPercentage, NewScreenPercentage));
+			FFidelityFXCASModule::Get().UpdateSSCASEnabled();
 			GScreenPercentage = NewScreenPercentage;
 		}
 	}
@@ -133,9 +158,9 @@ void FFidelityFXCASModule::StartupModule()
 	AddShaderSourceDirectoryMapping(TEXT("/Plugin/FidelityFXCAS"), PluginShaderDir);
 
 	// Reset variables
+	bIsSSCASEnabled = false;
 	SSCASSharpness = 0.0f;
 	OnResolvedSceneColorHandle.Reset();
-	bIsSSCASEnabled = false;
 }
 
 void FFidelityFXCASModule::ShutdownModule()
@@ -149,42 +174,71 @@ void FFidelityFXCASModule::ShutdownModule()
 bool FFidelityFXCASModule::GetIsSSCASEnabled() const
 {
 	return bIsSSCASEnabled;
-
-	//return OnResolvedSceneColorHandle.IsValid();
 }
 
 void FFidelityFXCASModule::SetIsSSCASEnabled(bool Enabled)
 {
-	if (Enabled == GetIsSSCASEnabled())
-		return;	// Nothing to do
+	if (Enabled != GetIsSSCASEnabled())
+	{
+		bIsSSCASEnabled = Enabled;
+		UpdateSSCASEnabled();
+	}
+}
 
+void FFidelityFXCASModule::UpdateSSCASEnabled()
+{
 	const FName RendererModuleName("Renderer");
 	IRendererModule* RendererModule = FModuleManager::GetModulePtr<IRendererModule>(RendererModuleName);
 
-	if (Enabled)
-		RendererModule->GetCustomUpscalePassCallback().BindRaw(this, &FFidelityFXCASModule::OnAddUpscalePass_RenderThread);
+	if (bIsSSCASEnabled)
+	{
+		bool bUpscale = false;
+		static const TConsoleVariableData<float>* CVarScreenPercentage = IConsoleManager::Get().FindTConsoleVariableDataFloat(TEXT("r.ScreenPercentage"));
+		if (CVarScreenPercentage)
+			bUpscale = CVarScreenPercentage->GetValueOnAnyThread() < 100.0f;
+		if (bUpscale)
+		{
+			UnbindResolvedSceneColorCallback(RendererModule);
+			BindCustomUpscaleCallback(RendererModule);
+		}
+		else
+		{
+			UnbindCustomUpscaleCallback(RendererModule);
+			BindResolvedSceneColorCallback(RendererModule);
+		}
+	}
 	else
-		RendererModule->GetCustomUpscalePassCallback().Unbind();
-	bIsSSCASEnabled = Enabled;
+	{
+		UnbindResolvedSceneColorCallback(RendererModule);
+		UnbindCustomUpscaleCallback(RendererModule);
+	}
+}
 
-	/*
-	if (Enabled)
-	{
-		if (RendererModule)
-			OnResolvedSceneColorHandle = RendererModule->GetResolvedSceneColorCallbacks().AddRaw(this, &FFidelityFXCASModule::OnResolvedSceneColor_RenderThread);
-	}
-	else
-	{
-		if (RendererModule)
-			RendererModule->GetResolvedSceneColorCallbacks().Remove(OnResolvedSceneColorHandle);
-		OnResolvedSceneColorHandle.Reset();
-	}
-	*/
+void FFidelityFXCASModule::BindResolvedSceneColorCallback(IRendererModule* RendererModule)
+{
+	if (!OnResolvedSceneColorHandle.IsValid())
+		OnResolvedSceneColorHandle = RendererModule->GetResolvedSceneColorCallbacks().AddRaw(this, &FFidelityFXCASModule::OnResolvedSceneColor_RenderThread);
+}
+
+void FFidelityFXCASModule::UnbindResolvedSceneColorCallback(IRendererModule* RendererModule)
+{
+	RendererModule->GetResolvedSceneColorCallbacks().Remove(OnResolvedSceneColorHandle);
+	OnResolvedSceneColorHandle.Reset();
+}
+
+void FFidelityFXCASModule::BindCustomUpscaleCallback(IRendererModule* RendererModule)
+{
+	if (!RendererModule->GetCustomUpscalePassCallback().IsBound())
+		RendererModule->GetCustomUpscalePassCallback().BindRaw(this, &FFidelityFXCASModule::OnAddUpscalePass_RenderThread);
+}
+
+void FFidelityFXCASModule::UnbindCustomUpscaleCallback(IRendererModule* RendererModule)
+{
+	RendererModule->GetCustomUpscalePassCallback().Unbind();
 }
 
 struct FFidelityFXDrawParams
 {
-	float SharpnessVal = 0.5f;
 	FIntPoint InputSize = FIntPoint::ZeroValue;
 	FIntPoint OutputSize = FIntPoint::ZeroValue;
 
@@ -272,12 +326,13 @@ FUnorderedAccessViewRHIRef FFidelityFXDrawParams::EMPTY_UnorderedAccessViewRHIRe
 
 struct FFidelityFXDrawParams_RDG
 {
-	float SharpnessVal = 0.5f;
 	FIntPoint InputSize = FIntPoint::ZeroValue;
 	FIntPoint OutputSize = FIntPoint::ZeroValue;
 
 	FRDGTextureRef InputTexture;
 	FRDGTextureRef RenderTarget;
+
+	FRenderTargetBinding RTBinding;
 
 	FTextureRenderTargetResource* RenderTargetResource;
 	FTexture2DRHIRef RenderTargetTexture2DRHI;
@@ -286,11 +341,12 @@ struct FFidelityFXDrawParams_RDG
 	TRefCountPtr<IPooledRenderTarget> ComputeShaderOutput;
 
 	FFidelityFXDrawParams_RDG() { }
-	FFidelityFXDrawParams_RDG(FRDGTextureRef InInputTexture, FIntPoint InOutputSize)
-		: OutputSize(InOutputSize)
-		, InputTexture(InInputTexture)
+	FFidelityFXDrawParams_RDG(FRDGTextureRef InInputTexture, const FRenderTargetBinding& InRTBinding)
+		: InputTexture(InInputTexture)
+		, RTBinding(InRTBinding)
 	{
 		InputSize = GetInputTextureSize();
+		OutputSize = RTBinding.GetTexture() != nullptr ? RTBinding.GetTexture()->Desc.Extent : FIntPoint::ZeroValue;
 	}
 
 	const FIntPoint GetInputTextureSize() { return InputTexture != nullptr ? InputTexture->Desc.Extent : FIntPoint::ZeroValue; }
@@ -311,79 +367,32 @@ FTextureRHIRef FFidelityFXDrawParams_RDG::EMPTY_TextureRHIRef;
 FSceneRenderTargetItem FFidelityFXDrawParams_RDG::EMPTY_SceneRenderTargetItem;
 FUnorderedAccessViewRHIRef FFidelityFXDrawParams_RDG::EMPTY_UnorderedAccessViewRHIRef;
 
-
-
-
-
-static void RunComputeShader_RenderThread(FRHICommandListImmediate& RHICmdList, const FFidelityFXDrawParams& DrawParams)
+void FFidelityFXCASModule::PrepareComputeShaderOutput(FRHICommandListImmediate& RHICmdList, const FIntPoint& OutputSize)
 {
-	QUICK_SCOPE_CYCLE_COUNTER(STAT_FidelityFXCASModule_ComputeShader);	// Used to gather CPU profiling data for the UE4 session frontend
-	SCOPED_DRAW_EVENT(RHICmdList, FidelityFXCASModule_ComputeShader);	// Used to profile GPU activity and add metadata to be consumed by for example RenderDoc
-
-	UnbindRenderTargets(RHICmdList);
-	RHICmdList.TransitionResource(EResourceTransitionAccess::ERWBarrier, EResourceTransitionPipeline::EGfxToCompute, DrawParams.GetUAV());
-
-	FFidelityFXCASShaderCS::FParameters PassParameters;
-	PassParameters.InputTexture = DrawParams.InputTexture;
-	PassParameters.OutputTexture = DrawParams.GetUAV();
-
-	CasSetup(reinterpret_cast<AU1*>(&PassParameters.const0), reinterpret_cast<AU1*>(&PassParameters.const1), DrawParams.SharpnessVal, static_cast<AF1>(DrawParams.InputSize.X),
-		static_cast<AF1>(DrawParams.InputSize.Y), DrawParams.OutputSize.X, DrawParams.OutputSize.Y);
-
-	bool FP16 = false;
-	bool SharpenOnly = (DrawParams.InputSize == DrawParams.OutputSize);
-
-	if (SharpenOnly)
+	bool NeedsRecreate = false;
+	if (ComputeShaderOutput.IsValid())
 	{
-		TShaderMapRef<TFidelityFXCASShaderCS<false, true>> ComputeShader(GetGlobalShaderMap(GMaxRHIFeatureLevel));
-		FComputeShaderUtils::Dispatch(RHICmdList, *ComputeShader, PassParameters, FIntVector(DrawParams.OutputSize.X, DrawParams.OutputSize.Y, 1));
+		// Check size if already exists
+		FRHITexture2D* RHITexture2D = ComputeShaderOutput->GetRenderTargetItem().TargetableTexture->GetTexture2D();
+		FIntPoint CurrentSize = RHITexture2D->GetSizeXY();
+		if (CurrentSize != OutputSize)
+		{
+			// Release the shader output if the size changed
+			//GEngine->AddOnScreenDebugMessage(INDEX_NONE, 5.f, FColor::Red, FString::Printf(TEXT("Releasing ComputeShaderOutput [%dx%d]..."), CurrentSize.X, CurrentSize.Y));
+			//GRenderTargetPool.FreeUnusedResource(ComputeShaderOutput);
+			NeedsRecreate = true;
+		}
 	}
-	else
+
+	// Create the shader output
+	if (!ComputeShaderOutput.IsValid() || NeedsRecreate)
 	{
-		TShaderMapRef<TFidelityFXCASShaderCS<false, false>> ComputeShader(GetGlobalShaderMap(GMaxRHIFeatureLevel));
-		FComputeShaderUtils::Dispatch(RHICmdList, *ComputeShader, PassParameters, FIntVector(DrawParams.OutputSize.X, DrawParams.OutputSize.Y, 1));
+		GEngine->AddOnScreenDebugMessage(INDEX_NONE, 5.f, FColor::Green, FString::Printf(TEXT("Creating ComputeShaderOutput [%dx%d]..."), OutputSize.X, OutputSize.Y));
+		FPooledRenderTargetDesc ComputeShaderOutputDesc(FPooledRenderTargetDesc::Create2DDesc(OutputSize, PF_FloatRGBA, FClearValueBinding::None,
+			TexCreate_None, TexCreate_ShaderResource | TexCreate_UAV, false));
+		ComputeShaderOutputDesc.DebugName = TEXT("FidelityFXCASModule_ComputeShaderOutput");
+		GRenderTargetPool.FindFreeElement(RHICmdList, ComputeShaderOutputDesc, ComputeShaderOutput, TEXT("FidelityFXCASModule_ComputeShaderOutput"));
 	}
-}
-
-void DrawToRenderTarget_RenderThread(FRHICommandListImmediate& RHICmdList, const FFidelityFXDrawParams& DrawParams)
-{
-	QUICK_SCOPE_CYCLE_COUNTER(STAT_FidelityFXCASModule_PixelShader);	// Used to gather CPU profiling data for the UE4 session frontend
-	SCOPED_DRAW_EVENT(RHICmdList, FidelityFXCASModule_PixelShader);		// Used to profile GPU activity and add metadata to be consumed by for example RenderDoc
-
-	FRHIRenderPassInfo RenderPassInfo(DrawParams.GetRenderTargetTexture(), ERenderTargetActions::Clear_Store);
-	RHICmdList.BeginRenderPass(RenderPassInfo, TEXT("FidelityFXCASModule_OutputToRenderTarget"));
-
-	auto ShaderMap = GetGlobalShaderMap(GMaxRHIFeatureLevel);
-	TShaderMapRef<FFidelityFXCASShaderVS> VertexShader(ShaderMap);
-	TShaderMapRef<FFidelityFXCASShaderPS> PixelShader(ShaderMap);
-
-	// Set the graphic pipeline state.
-	FGraphicsPipelineStateInitializer GraphicsPSOInit;
-	RHICmdList.ApplyCachedRenderTargets(GraphicsPSOInit);
-	GraphicsPSOInit.BlendState = TStaticBlendState<>::GetRHI();
-	GraphicsPSOInit.RasterizerState = TStaticRasterizerState<>::GetRHI();
-	GraphicsPSOInit.DepthStencilState = TStaticDepthStencilState<false, CF_Always>::GetRHI();
-	GraphicsPSOInit.BoundShaderState.VertexDeclarationRHI = GFilterVertexDeclaration.VertexDeclarationRHI;
-	GraphicsPSOInit.BoundShaderState.VertexShaderRHI = GETSAFERHISHADER_VERTEX(*VertexShader);
-	GraphicsPSOInit.BoundShaderState.PixelShaderRHI = GETSAFERHISHADER_PIXEL(*PixelShader);
-	GraphicsPSOInit.PrimitiveType = PT_TriangleStrip;
-	SetGraphicsPipelineState(RHICmdList, GraphicsPSOInit);
-
-	// Setup the pixel shader
-	FFidelityFXCASShaderPS::FParameters PassParameters;
-	PassParameters.UpscaledTexture = DrawParams.GetComputeShaderOutputTargetableTexture();
-	PassParameters.samLinearClamp = TStaticSamplerState<SF_Point, AM_Clamp, AM_Clamp, AM_Clamp>::GetRHI();
-
-	SetShaderParameters(RHICmdList, *PixelShader, PixelShader->GetPixelShader(), PassParameters);
-
-	// Draw
-	RHICmdList.SetStreamSource(0, GFidelityFXCASVertexBuffer.VertexBufferRHI, 0);
-	RHICmdList.DrawPrimitive(0, 2, 1);
-
-	// Resolve render target
-	RHICmdList.CopyToResolveTarget(DrawParams.GetRenderTargetTexture(), DrawParams.GetRenterTargetTextureRHI(), FResolveParams());
-
-	RHICmdList.EndRenderPass();
 }
 
 void FFidelityFXCASModule::OnResolvedSceneColor_RenderThread(FRHICommandListImmediate& RHICmdList, FSceneRenderTargets& SceneContext)
@@ -403,42 +412,15 @@ void FFidelityFXCASModule::OnResolvedSceneColor_RenderThread(FRHICommandListImme
 	FFidelityFXDrawParams DrawParams(SceneColorTexture, SceneColorTexture);
 
 	// Update resolution info
-	{
-		FScopeLock Lock(&ResolutionInfoCS);
-		InputResolution = DrawParams.InputSize;
-		OutputResolution = DrawParams.OutputSize;
-	}
+	SetSSCASResolutionInfo(DrawParams.InputSize, DrawParams.OutputSize);
 
-	// Release the shader output if the size changed
-	bool NeedsRecreate = false;
-	if (ComputeShaderOutput.IsValid())
-	{
-		FRHITexture2D* RHITexture2D = ComputeShaderOutput->GetRenderTargetItem().TargetableTexture->GetTexture2D();
-		FIntPoint CurrentSize = RHITexture2D->GetSizeXY();
-		if (CurrentSize != DrawParams.OutputSize)
-		{
-			//GEngine->AddOnScreenDebugMessage(INDEX_NONE, 5.f, FColor::Red, FString::Printf(TEXT("Releasing ComputeShaderOutput [%dx%d]..."), CurrentSize.X, CurrentSize.Y));
-			//GRenderTargetPool.FreeUnusedResource(ComputeShaderOutput);
-			NeedsRecreate = true;
-		}
-	}
-
-	// Create the shader output
-	if (!ComputeShaderOutput.IsValid() || NeedsRecreate)
-	{
-		GEngine->AddOnScreenDebugMessage(INDEX_NONE, 5.f, FColor::Green, FString::Printf(TEXT("Creating ComputeShaderOutput [%dx%d]..."), DrawParams.OutputSize.X, DrawParams.OutputSize.Y));
-		FPooledRenderTargetDesc ComputeShaderOutputDesc(FPooledRenderTargetDesc::Create2DDesc(DrawParams.OutputSize, PF_FloatRGBA, FClearValueBinding::None, TexCreate_None, TexCreate_ShaderResource | TexCreate_UAV, false));
-		ComputeShaderOutputDesc.DebugName = TEXT("FidelityFXCASModule_ComputeShaderOutput");
-		GRenderTargetPool.FindFreeElement(RHICmdList, ComputeShaderOutputDesc, ComputeShaderOutput, TEXT("FidelityFXCASModule_ComputeShaderOutput"));
-	}
-
+	// Make sure the computer shader output is ready and with correct size
+	PrepareComputeShaderOutput(RHICmdList, DrawParams.OutputSize);
 	DrawParams.ComputeShaderOutput = ComputeShaderOutput;
-	DrawParams.SharpnessVal = SSCASSharpness;
 
-	FTextureRHIRef REF = SceneContext.GetSceneColor()->GetRenderTargetItem().ShaderResourceTexture;
-
-	RunComputeShader_RenderThread(RHICmdList, DrawParams);
-	DrawToRenderTarget_RenderThread(RHICmdList, DrawParams);
+	// Call shaders
+	RunComputeShader_RHI_RenderThread(RHICmdList, DrawParams);
+	DrawToRenderTarget_RHI_RenderThread(RHICmdList, DrawParams);
 }
 
 void FFidelityFXCASModule::OnAddUpscalePass_RenderThread(FRDGBuilder& GraphBuilder, FRDGTexture* SceneColor, const FRenderTargetBinding& RTBinding)
@@ -448,117 +430,189 @@ void FFidelityFXCASModule::OnAddUpscalePass_RenderThread(FRDGBuilder& GraphBuild
 	QUICK_SCOPE_CYCLE_COUNTER(STAT_FidelityFXCASModule_Render);	// Used to gather CPU profiling data for the UE4 session frontend
 	SCOPED_DRAW_EVENT(GraphBuilder.RHICmdList, FidelityFXCASModule_Render);	// Used to profile GPU activity and add metadata to be consumed by for example RenderDoc
 
-	FIntPoint OutputSize = RTBinding.GetTexture() != nullptr ? RTBinding.GetTexture()->Desc.Extent : FIntPoint::ZeroValue;
-	FFidelityFXDrawParams_RDG DrawParams(SceneColor, OutputSize);
+	FFidelityFXDrawParams_RDG DrawParams(SceneColor, RTBinding);
 
 	// Update resolution info
-	{
-		FScopeLock Lock(&ResolutionInfoCS);
-		InputResolution = DrawParams.InputSize;
-		OutputResolution = DrawParams.OutputSize;
-	}
+	SetSSCASResolutionInfo(DrawParams.InputSize, DrawParams.OutputSize);
 
-	// Release the shader output if the size changed
-	bool NeedsRecreate = false;
-	if (ComputeShaderOutput.IsValid())
-	{
-		FRHITexture2D* RHITexture2D = ComputeShaderOutput->GetRenderTargetItem().TargetableTexture->GetTexture2D();
-		FIntPoint CurrentSize = RHITexture2D->GetSizeXY();
-		if (CurrentSize != DrawParams.OutputSize)
-		{
-			//GEngine->AddOnScreenDebugMessage(INDEX_NONE, 5.f, FColor::Red, FString::Printf(TEXT("Releasing ComputeShaderOutput [%dx%d]..."), CurrentSize.X, CurrentSize.Y));
-			//GRenderTargetPool.FreeUnusedResource(ComputeShaderOutput);
-			NeedsRecreate = true;
-		}
-	}
-
-	// Create the shader output
-	if (!ComputeShaderOutput.IsValid() || NeedsRecreate)
-	{
-		GEngine->AddOnScreenDebugMessage(INDEX_NONE, 5.f, FColor::Green, FString::Printf(TEXT("Creating ComputeShaderOutput [%dx%d]..."), DrawParams.OutputSize.X, DrawParams.OutputSize.Y));
-		FPooledRenderTargetDesc ComputeShaderOutputDesc(FPooledRenderTargetDesc::Create2DDesc(DrawParams.OutputSize, PF_FloatRGBA, FClearValueBinding::None, TexCreate_None, TexCreate_ShaderResource | TexCreate_UAV, false));
-		ComputeShaderOutputDesc.DebugName = TEXT("FidelityFXCASModule_ComputeShaderOutput");
-		GRenderTargetPool.FindFreeElement(GraphBuilder.RHICmdList, ComputeShaderOutputDesc, ComputeShaderOutput, TEXT("FidelityFXCASModule_ComputeShaderOutput"));
-	}
-
+	// Make sure the computer shader output is ready and with correct size
+	PrepareComputeShaderOutput(GraphBuilder.RHICmdList, DrawParams.OutputSize);
 	DrawParams.ComputeShaderOutput = ComputeShaderOutput;
-	DrawParams.SharpnessVal = SSCASSharpness;
 
-	// Compute shader
+	// Call shaders
+	RunComputeShader_RDG_RenderThread(GraphBuilder, DrawParams);
+	DrawToRenderTarget_RDG_RenderThread(GraphBuilder, DrawParams);
+}
+
+void FFidelityFXCASModule::RunComputeShader_RHI_RenderThread(FRHICommandListImmediate& RHICmdList, const struct FFidelityFXDrawParams& DrawParams)
+{
+	QUICK_SCOPE_CYCLE_COUNTER(STAT_FidelityFXCASModule_ComputeShader_RHI);	// Used to gather CPU profiling data for the UE4 session frontend
+	SCOPED_DRAW_EVENT(RHICmdList, FidelityFXCASModule_ComputeShader_RHI);	// Used to profile GPU activity and add metadata to be consumed by for example RenderDoc
+
+	UnbindRenderTargets(RHICmdList);
+	RHICmdList.TransitionResource(EResourceTransitionAccess::ERWBarrier, EResourceTransitionPipeline::EGfxToCompute, DrawParams.GetUAV());
+
+	// Setup shader parameters
+	FFidelityFXCASShaderCS::FParameters PassParameters;
+	PassParameters.InputTexture = DrawParams.InputTexture;
+	PassParameters.OutputTexture = DrawParams.GetUAV();
+	CasSetup(reinterpret_cast<AU1*>(&PassParameters.const0), reinterpret_cast<AU1*>(&PassParameters.const1),
+		SSCASSharpness,
+		static_cast<AF1>(DrawParams.InputSize.X), static_cast<AF1>(DrawParams.InputSize.Y),
+		DrawParams.OutputSize.X, DrawParams.OutputSize.Y);
+
+	// Choose shader version and dispatch
+	bool SharpenOnly = (DrawParams.InputSize == DrawParams.OutputSize);
+	if (bUseFP16 && SharpenOnly)
 	{
-		FFidelityFXCASShaderCS_RDG::FParameters* PassParameters = GraphBuilder.AllocParameters<FFidelityFXCASShaderCS_RDG::FParameters>();
-		PassParameters->InputTexture = DrawParams.InputTexture;
-		PassParameters->OutputTexture = DrawParams.GetUAV();
-		CasSetup(reinterpret_cast<AU1*>(&PassParameters->const0), reinterpret_cast<AU1*>(&PassParameters->const1), DrawParams.SharpnessVal, static_cast<AF1>(DrawParams.InputSize.X),
-			static_cast<AF1>(DrawParams.InputSize.Y), DrawParams.OutputSize.X, DrawParams.OutputSize.Y);
-
-		bool FP16 = false;
-		bool SharpenOnly = (DrawParams.InputSize == DrawParams.OutputSize);
-
-		if (SharpenOnly)
-		{
-			TShaderMapRef<TFidelityFXCASShaderCS_RDG<false, true>> ComputeShader(GetGlobalShaderMap(GMaxRHIFeatureLevel));
-			FComputeShaderUtils::AddPass(GraphBuilder,
-				RDG_EVENT_NAME("Upscale CS %dx%d -> %dx%d", DrawParams.InputSize.X, DrawParams.InputSize.Y, DrawParams.OutputSize.X, DrawParams.OutputSize.Y),
-				*ComputeShader, PassParameters, FIntVector(DrawParams.OutputSize.X, DrawParams.OutputSize.Y, 1));
-		}
-		else
-		{
-			TShaderMapRef<TFidelityFXCASShaderCS_RDG<false, false>> ComputeShader(GetGlobalShaderMap(GMaxRHIFeatureLevel));
-			FComputeShaderUtils::AddPass(GraphBuilder,
-				RDG_EVENT_NAME("Upscale CS %dx%d -> %dx%d", DrawParams.InputSize.X, DrawParams.InputSize.Y, DrawParams.OutputSize.X, DrawParams.OutputSize.Y),
-				*ComputeShader, PassParameters, FIntVector(DrawParams.OutputSize.X, DrawParams.OutputSize.Y, 1));
-		}
+		TShaderMapRef<TFidelityFXCASShaderCS<true, true>> ComputeShader(GetGlobalShaderMap(GMaxRHIFeatureLevel));
+		FComputeShaderUtils::Dispatch(RHICmdList, *ComputeShader, PassParameters, FIntVector(DrawParams.OutputSize.X, DrawParams.OutputSize.Y, 1));
 	}
-
-	// Pixel shader
+	else if (SharpenOnly)
 	{
-		QUICK_SCOPE_CYCLE_COUNTER(STAT_FidelityFXCASModule_PixelShader);	// Used to gather CPU profiling data for the UE4 session frontend
-		SCOPED_DRAW_EVENT(GraphBuilder.RHICmdList, FidelityFXCASModule_PixelShader);		// Used to profile GPU activity and add metadata to be consumed by for example RenderDoc
-
-		//FRHIRenderPassInfo RenderPassInfo(DrawParams.GetRenderTargetTexture(), ERenderTargetActions::Clear_Store);
-		//RHICmdList.BeginRenderPass(RenderPassInfo, TEXT("FidelityFXCASModule_OutputToRenderTarget"));
-
-		auto ShaderMap = GetGlobalShaderMap(GMaxRHIFeatureLevel);
-		TShaderMapRef<FFidelityFXCASShaderVS> VertexShader(ShaderMap);
-		TShaderMapRef<FFidelityFXCASShaderPS_RDG> PixelShader(ShaderMap);
-
-		// Setup the pixel shader
-		FFidelityFXCASShaderPS_RDG::FParameters* PassParameters = GraphBuilder.AllocParameters<FFidelityFXCASShaderPS_RDG::FParameters>();
-		PassParameters->UpscaledTexture = DrawParams.GetComputeShaderOutputTargetableTexture();
-		PassParameters->samLinearClamp = TStaticSamplerState<SF_Point, AM_Clamp, AM_Clamp, AM_Clamp>::GetRHI();
-		PassParameters->RenderTargets[0] = RTBinding;
-
-		GraphBuilder.AddPass(
-			RDG_EVENT_NAME("Upscale PS %dx%d -> %dx%d", DrawParams.InputSize.X, DrawParams.InputSize.Y, DrawParams.OutputSize.X, DrawParams.OutputSize.Y),
-			PassParameters,
-			ERDGPassFlags::Raster,
-			[VertexShader, PixelShader, PassParameters, DrawParams](FRHICommandList& RHICmdList)
-		{
-			// Set the graphic pipeline state.
-			FGraphicsPipelineStateInitializer GraphicsPSOInit;
-			RHICmdList.ApplyCachedRenderTargets(GraphicsPSOInit);
-			GraphicsPSOInit.BlendState = TStaticBlendState<>::GetRHI();
-			GraphicsPSOInit.RasterizerState = TStaticRasterizerState<>::GetRHI();
-			GraphicsPSOInit.DepthStencilState = TStaticDepthStencilState<false, CF_Always>::GetRHI();
-			GraphicsPSOInit.BoundShaderState.VertexDeclarationRHI = GFilterVertexDeclaration.VertexDeclarationRHI;
-			GraphicsPSOInit.BoundShaderState.VertexShaderRHI = GETSAFERHISHADER_VERTEX(*VertexShader);
-			GraphicsPSOInit.BoundShaderState.PixelShaderRHI = GETSAFERHISHADER_PIXEL(*PixelShader);
-			GraphicsPSOInit.PrimitiveType = PT_TriangleStrip;
-			SetGraphicsPipelineState(RHICmdList, GraphicsPSOInit);
-
-			SetShaderParameters(RHICmdList, *PixelShader, PixelShader->GetPixelShader(), *PassParameters);
-
-			// Draw
-			RHICmdList.SetStreamSource(0, GFidelityFXCASVertexBuffer.VertexBufferRHI, 0);
-			RHICmdList.DrawPrimitive(0, 2, 1);
-
-			// Resolve render target
-			//RHICmdList.CopyToResolveTarget(DrawParams.GetRenderTargetTexture(), DrawParams.GetRenterTargetTextureRHI(), FResolveParams());
-
-			//RHICmdList.EndRenderPass();
-		});
+		TShaderMapRef<TFidelityFXCASShaderCS<false, true>> ComputeShader(GetGlobalShaderMap(GMaxRHIFeatureLevel));
+		FComputeShaderUtils::Dispatch(RHICmdList, *ComputeShader, PassParameters, FIntVector(DrawParams.OutputSize.X, DrawParams.OutputSize.Y, 1));
 	}
+	else if (bUseFP16)
+	{
+		TShaderMapRef<TFidelityFXCASShaderCS<true, false>> ComputeShader(GetGlobalShaderMap(GMaxRHIFeatureLevel));
+		FComputeShaderUtils::Dispatch(RHICmdList, *ComputeShader, PassParameters, FIntVector(DrawParams.OutputSize.X, DrawParams.OutputSize.Y, 1));
+	}
+	else
+	{
+		TShaderMapRef<TFidelityFXCASShaderCS<false, false>> ComputeShader(GetGlobalShaderMap(GMaxRHIFeatureLevel));
+		FComputeShaderUtils::Dispatch(RHICmdList, *ComputeShader, PassParameters, FIntVector(DrawParams.OutputSize.X, DrawParams.OutputSize.Y, 1));
+	}
+}
+
+void FFidelityFXCASModule::RunComputeShader_RDG_RenderThread(FRDGBuilder& GraphBuilder, const struct FFidelityFXDrawParams_RDG& DrawParams)
+{
+	QUICK_SCOPE_CYCLE_COUNTER(STAT_FidelityFXCASModule_ComputeShader_RDG);				// Used to gather CPU profiling data for the UE4 session frontend
+	SCOPED_DRAW_EVENT(GraphBuilder.RHICmdList, FidelityFXCASModule_ComputeShader_RDG);	// Used to profile GPU activity and add metadata to be consumed by for example RenderDoc
+
+	// Setup shader parameters
+	FFidelityFXCASShaderCS_RDG::FParameters* PassParameters = GraphBuilder.AllocParameters<FFidelityFXCASShaderCS_RDG::FParameters>();
+	PassParameters->InputTexture = DrawParams.InputTexture;
+	PassParameters->OutputTexture = DrawParams.GetUAV();
+	CasSetup(reinterpret_cast<AU1*>(&PassParameters->const0), reinterpret_cast<AU1*>(&PassParameters->const1),
+		SSCASSharpness,
+		static_cast<AF1>(DrawParams.InputSize.X), static_cast<AF1>(DrawParams.InputSize.Y),
+		DrawParams.OutputSize.X, DrawParams.OutputSize.Y);
+
+	// Choose shader version and dispatch
+	bool SharpenOnly = (DrawParams.InputSize == DrawParams.OutputSize);
+	if (CVarFidelityFXCAS_SSCASNoUpscale.GetValueOnGameThread() > 0)
+		SharpenOnly = true;
+	if (bUseFP16 && SharpenOnly)
+	{
+		TShaderMapRef<TFidelityFXCASShaderCS_RDG<true, true>> ComputeShader(GetGlobalShaderMap(GMaxRHIFeatureLevel));
+		FComputeShaderUtils::AddPass(GraphBuilder,
+			RDG_EVENT_NAME("Upscale CS %dx%d -> %dx%d", DrawParams.InputSize.X, DrawParams.InputSize.Y, DrawParams.OutputSize.X, DrawParams.OutputSize.Y),
+			*ComputeShader, PassParameters, FIntVector(DrawParams.OutputSize.X, DrawParams.OutputSize.Y, 1));
+	}
+	else if (SharpenOnly)
+	{
+		TShaderMapRef<TFidelityFXCASShaderCS_RDG<false, true>> ComputeShader(GetGlobalShaderMap(GMaxRHIFeatureLevel));
+		FComputeShaderUtils::AddPass(GraphBuilder,
+			RDG_EVENT_NAME("Upscale CS %dx%d -> %dx%d", DrawParams.InputSize.X, DrawParams.InputSize.Y, DrawParams.OutputSize.X, DrawParams.OutputSize.Y),
+			*ComputeShader, PassParameters, FIntVector(DrawParams.OutputSize.X, DrawParams.OutputSize.Y, 1));
+	}
+	else if (bUseFP16)
+	{
+		TShaderMapRef<TFidelityFXCASShaderCS_RDG<true, false>> ComputeShader(GetGlobalShaderMap(GMaxRHIFeatureLevel));
+		FComputeShaderUtils::AddPass(GraphBuilder,
+			RDG_EVENT_NAME("Upscale CS %dx%d -> %dx%d", DrawParams.InputSize.X, DrawParams.InputSize.Y, DrawParams.OutputSize.X, DrawParams.OutputSize.Y),
+			*ComputeShader, PassParameters, FIntVector(DrawParams.OutputSize.X, DrawParams.OutputSize.Y, 1));
+	}
+	else
+	{
+		TShaderMapRef<TFidelityFXCASShaderCS_RDG<false, false>> ComputeShader(GetGlobalShaderMap(GMaxRHIFeatureLevel));
+		FComputeShaderUtils::AddPass(GraphBuilder,
+			RDG_EVENT_NAME("Upscale CS %dx%d -> %dx%d", DrawParams.InputSize.X, DrawParams.InputSize.Y, DrawParams.OutputSize.X, DrawParams.OutputSize.Y),
+			*ComputeShader, PassParameters, FIntVector(DrawParams.OutputSize.X, DrawParams.OutputSize.Y, 1));
+	}
+}
+
+void FFidelityFXCASModule::DrawToRenderTarget_RHI_RenderThread(FRHICommandListImmediate& RHICmdList, const struct FFidelityFXDrawParams& DrawParams)
+{
+	QUICK_SCOPE_CYCLE_COUNTER(STAT_FidelityFXCASModule_PixelShader);	// Used to gather CPU profiling data for the UE4 session frontend
+	SCOPED_DRAW_EVENT(RHICmdList, FidelityFXCASModule_PixelShader);		// Used to profile GPU activity and add metadata to be consumed by for example RenderDoc
+
+	FRHIRenderPassInfo RenderPassInfo(DrawParams.GetRenderTargetTexture(), ERenderTargetActions::Clear_Store);
+	RHICmdList.BeginRenderPass(RenderPassInfo, TEXT("FidelityFXCASModule_DrawToRenderTarget_RHI_RenderThread"));
+
+	auto ShaderMap = GetGlobalShaderMap(GMaxRHIFeatureLevel);
+	TShaderMapRef<FFidelityFXCASShaderVS> VertexShader(ShaderMap);
+	TShaderMapRef<FFidelityFXCASShaderPS> PixelShader(ShaderMap);
+
+	// Setup the pixel shader
+	FFidelityFXCASShaderPS::FParameters PassParameters;
+	PassParameters.UpscaledTexture = DrawParams.GetComputeShaderOutputTargetableTexture();
+	PassParameters.samLinearClamp = TStaticSamplerState<SF_Point, AM_Clamp, AM_Clamp, AM_Clamp>::GetRHI();
+
+	// Set the graphic pipeline state.
+	FGraphicsPipelineStateInitializer GraphicsPSOInit;
+	RHICmdList.ApplyCachedRenderTargets(GraphicsPSOInit);
+	GraphicsPSOInit.BlendState = TStaticBlendState<>::GetRHI();
+	GraphicsPSOInit.RasterizerState = TStaticRasterizerState<>::GetRHI();
+	GraphicsPSOInit.DepthStencilState = TStaticDepthStencilState<false, CF_Always>::GetRHI();
+	GraphicsPSOInit.BoundShaderState.VertexDeclarationRHI = GFilterVertexDeclaration.VertexDeclarationRHI;
+	GraphicsPSOInit.BoundShaderState.VertexShaderRHI = GETSAFERHISHADER_VERTEX(*VertexShader);
+	GraphicsPSOInit.BoundShaderState.PixelShaderRHI = GETSAFERHISHADER_PIXEL(*PixelShader);
+	GraphicsPSOInit.PrimitiveType = PT_TriangleStrip;
+	SetGraphicsPipelineState(RHICmdList, GraphicsPSOInit);
+
+	SetShaderParameters(RHICmdList, *PixelShader, PixelShader->GetPixelShader(), PassParameters);
+
+	// Draw
+	RHICmdList.SetStreamSource(0, GFidelityFXCASVertexBuffer.VertexBufferRHI, 0);
+	RHICmdList.DrawPrimitive(0, 2, 1);
+
+	// Resolve render target
+	RHICmdList.CopyToResolveTarget(DrawParams.GetRenderTargetTexture(), DrawParams.GetRenterTargetTextureRHI(), FResolveParams());
+
+	RHICmdList.EndRenderPass();
+}
+
+void FFidelityFXCASModule::DrawToRenderTarget_RDG_RenderThread(FRDGBuilder& GraphBuilder, const struct FFidelityFXDrawParams_RDG& DrawParams)
+{
+	QUICK_SCOPE_CYCLE_COUNTER(STAT_FidelityFXCASModule_PixelShader);				// Used to gather CPU profiling data for the UE4 session frontend
+	SCOPED_DRAW_EVENT(GraphBuilder.RHICmdList, FidelityFXCASModule_PixelShader);	// Used to profile GPU activity and add metadata to be consumed by for example RenderDoc
+
+	auto ShaderMap = GetGlobalShaderMap(GMaxRHIFeatureLevel);
+	TShaderMapRef<FFidelityFXCASShaderVS> VertexShader(ShaderMap);
+	TShaderMapRef<FFidelityFXCASShaderPS_RDG> PixelShader(ShaderMap);
+
+	// Setup the pixel shader
+	FFidelityFXCASShaderPS_RDG::FParameters* PassParameters = GraphBuilder.AllocParameters<FFidelityFXCASShaderPS_RDG::FParameters>();
+	PassParameters->UpscaledTexture = DrawParams.GetComputeShaderOutputTargetableTexture();
+	PassParameters->samLinearClamp = TStaticSamplerState<SF_Point, AM_Clamp, AM_Clamp, AM_Clamp>::GetRHI();
+	PassParameters->RenderTargets[0] = DrawParams.RTBinding;
+
+	GraphBuilder.AddPass(
+		RDG_EVENT_NAME("Upscale PS %dx%d -> %dx%d", DrawParams.InputSize.X, DrawParams.InputSize.Y, DrawParams.OutputSize.X, DrawParams.OutputSize.Y),
+		PassParameters,
+		ERDGPassFlags::Raster,
+		[VertexShader, PixelShader, PassParameters, DrawParams](FRHICommandList& RHICmdList)
+	{
+		// Set the graphic pipeline state.
+		FGraphicsPipelineStateInitializer GraphicsPSOInit;
+		RHICmdList.ApplyCachedRenderTargets(GraphicsPSOInit);
+		GraphicsPSOInit.BlendState = TStaticBlendState<>::GetRHI();
+		GraphicsPSOInit.RasterizerState = TStaticRasterizerState<>::GetRHI();
+		GraphicsPSOInit.DepthStencilState = TStaticDepthStencilState<false, CF_Always>::GetRHI();
+		GraphicsPSOInit.BoundShaderState.VertexDeclarationRHI = GFilterVertexDeclaration.VertexDeclarationRHI;
+		GraphicsPSOInit.BoundShaderState.VertexShaderRHI = GETSAFERHISHADER_VERTEX(*VertexShader);
+		GraphicsPSOInit.BoundShaderState.PixelShaderRHI = GETSAFERHISHADER_PIXEL(*PixelShader);
+		GraphicsPSOInit.PrimitiveType = PT_TriangleStrip;
+		SetGraphicsPipelineState(RHICmdList, GraphicsPSOInit);
+
+		SetShaderParameters(RHICmdList, *PixelShader, PixelShader->GetPixelShader(), *PassParameters);
+
+		// Draw
+		RHICmdList.SetStreamSource(0, GFidelityFXCASVertexBuffer.VertexBufferRHI, 0);
+		RHICmdList.DrawPrimitive(0, 2, 1);
+	});
 }
 
 void FFidelityFXCASModule::GetSSCASResolutionInfo(FIntPoint& OutInputResolution, FIntPoint& OutOutputResolution) const
@@ -566,6 +620,13 @@ void FFidelityFXCASModule::GetSSCASResolutionInfo(FIntPoint& OutInputResolution,
 	FScopeLock Lock(&ResolutionInfoCS);
 	OutInputResolution = InputResolution;
 	OutOutputResolution = OutputResolution;
+}
+
+void FFidelityFXCASModule::SetSSCASResolutionInfo(const FIntPoint& InInputResolution, const FIntPoint& InOutputResolution)
+{
+	FScopeLock Lock(&ResolutionInfoCS);
+	InputResolution = InInputResolution;
+	OutputResolution = InOutputResolution;
 }
 
 #undef LOCTEXT_NAMESPACE
