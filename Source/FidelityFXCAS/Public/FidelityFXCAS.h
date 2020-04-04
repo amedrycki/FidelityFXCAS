@@ -54,13 +54,13 @@ protected:
 	void OnAddUpscalePass_RenderThread(class FRDGBuilder& GraphBuilder, class FRDGTexture* SceneColor, const FRenderTargetBinding& RTBinding);
 
 	// Compute shader call
-	void RunComputeShader_RHI_RenderThread(FRHICommandListImmediate& RHICmdList, const struct FFidelityFXDrawParams& DrawParams);
-	void RunComputeShader_RDG_RenderThread(FRDGBuilder& GraphBuilder, const struct FFidelityFXDrawParams_RDG& DrawParams);
+	void RunComputeShader_RHI_RenderThread(FRHICommandListImmediate& RHICmdList, const class FFidelityFXCASPassParams_RHI& CASPassParams);
+	void RunComputeShader_RDG_RenderThread(FRDGBuilder& GraphBuilder, const class FFidelityFXCASPassParams_RDG& CASPassParams);
 	static FIntVector GetDispatchGroupCount(FIntPoint OutputSize);
 
 	// Pixel shader draw
-	void DrawToRenderTarget_RHI_RenderThread(FRHICommandListImmediate& RHICmdList, const struct FFidelityFXDrawParams& DrawParams);
-	void DrawToRenderTarget_RDG_RenderThread(FRDGBuilder& GraphBuilder, const struct FFidelityFXDrawParams_RDG& DrawParams);
+	void DrawToRenderTarget_RHI_RenderThread(FRHICommandListImmediate& RHICmdList, const class FFidelityFXCASPassParams_RHI& CASPassParams);
+	void DrawToRenderTarget_RDG_RenderThread(FRDGBuilder& GraphBuilder, const class FFidelityFXCASPassParams_RDG& CASPassParams);
 
 	// Resolution info
 	mutable FCriticalSection ResolutionInfoCS;
