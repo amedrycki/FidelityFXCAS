@@ -1,8 +1,7 @@
 // Copyright 1998-2019 Epic Games, Inc. All Rights Reserved.
 
 #include "FidelityFXCAS.h"
-#include "FidelityFXCASPassParams_RHI.h"
-#include "FidelityFXCASPassParams_RDG.h"
+#include "FidelityFXCASPassParams.h"
 #include "FidelityFXCASShaderCS.h"
 #include "FidelityFXCASShaderPS.h"
 #include "FidelityFXCASShaderVS.h"
@@ -325,7 +324,7 @@ void FFidelityFXCASModule::RunComputeShader_RHI_RenderThread(FRHICommandListImme
 	RHICmdList.TransitionResource(EResourceTransitionAccess::ERWBarrier, EResourceTransitionPipeline::EGfxToCompute, CASPassParams.GetUAV());
 
 	// Setup shader parameters
-	FFidelityFXCASShaderCS::FParameters PassParameters;
+	FFidelityFXCASShaderCS_RHI::FParameters PassParameters;
 	PassParameters.InputTexture = CASPassParams.GetInputTexture();
 	PassParameters.OutputTexture = CASPassParams.GetUAV();
 	CasSetup(reinterpret_cast<AU1*>(&PassParameters.const0), reinterpret_cast<AU1*>(&PassParameters.const1),
@@ -339,22 +338,22 @@ void FFidelityFXCASModule::RunComputeShader_RHI_RenderThread(FRHICommandListImme
 		SharpenOnly = true;
 	if (bUseFP16 && SharpenOnly)
 	{
-		TShaderMapRef<TFidelityFXCASShaderCS<true, true>> ComputeShader(GetGlobalShaderMap(GMaxRHIFeatureLevel));
+		TShaderMapRef<TFidelityFXCASShaderCS_RHI_FP16_SharpenOnly> ComputeShader(GetGlobalShaderMap(GMaxRHIFeatureLevel));
 		FComputeShaderUtils::Dispatch(RHICmdList, *ComputeShader, PassParameters, GetDispatchGroupCount(CASPassParams.GetOutputSize()));
 	}
 	else if (SharpenOnly)
 	{
-		TShaderMapRef<TFidelityFXCASShaderCS<false, true>> ComputeShader(GetGlobalShaderMap(GMaxRHIFeatureLevel));
+		TShaderMapRef<TFidelityFXCASShaderCS_RHI_FP32_SharpenOnly> ComputeShader(GetGlobalShaderMap(GMaxRHIFeatureLevel));
 		FComputeShaderUtils::Dispatch(RHICmdList, *ComputeShader, PassParameters, GetDispatchGroupCount(CASPassParams.GetOutputSize()));
 	}
 	else if (bUseFP16)
 	{
-		TShaderMapRef<TFidelityFXCASShaderCS<true, false>> ComputeShader(GetGlobalShaderMap(GMaxRHIFeatureLevel));
+		TShaderMapRef<TFidelityFXCASShaderCS_RHI_FP16_Upscale> ComputeShader(GetGlobalShaderMap(GMaxRHIFeatureLevel));
 		FComputeShaderUtils::Dispatch(RHICmdList, *ComputeShader, PassParameters, GetDispatchGroupCount(CASPassParams.GetOutputSize()));
 	}
 	else
 	{
-		TShaderMapRef<TFidelityFXCASShaderCS<false, false>> ComputeShader(GetGlobalShaderMap(GMaxRHIFeatureLevel));
+		TShaderMapRef<TFidelityFXCASShaderCS_RHI_FP32_Upscale> ComputeShader(GetGlobalShaderMap(GMaxRHIFeatureLevel));
 		FComputeShaderUtils::Dispatch(RHICmdList, *ComputeShader, PassParameters, GetDispatchGroupCount(CASPassParams.GetOutputSize()));
 	}
 }
@@ -427,10 +426,10 @@ void FFidelityFXCASModule::DrawToRenderTarget_RHI_RenderThread(FRHICommandListIm
 
 	auto ShaderMap = GetGlobalShaderMap(GMaxRHIFeatureLevel);
 	TShaderMapRef<FFidelityFXCASShaderVS> VertexShader(ShaderMap);
-	TShaderMapRef<FFidelityFXCASShaderPS> PixelShader(ShaderMap);
+	TShaderMapRef<FFidelityFXCASShaderPS_RHI> PixelShader(ShaderMap);
 
 	// Setup the pixel shader
-	FFidelityFXCASShaderPS::FParameters PassParameters;
+	FFidelityFXCASShaderPS_RHI::FParameters PassParameters;
 	PassParameters.UpscaledTexture = CASPassParams.GetCSOutputTargetableTexture();
 	PassParameters.samLinearClamp = TStaticSamplerState<SF_Point, AM_Clamp, AM_Clamp, AM_Clamp>::GetRHI();
 

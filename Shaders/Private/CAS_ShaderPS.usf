@@ -19,16 +19,14 @@
 
 struct VERTEX
 {
-    float2 vTexcoord : TEXCOORD;
+	float2 vTexcoord : TEXCOORD;
 };
 
 //--------------------------------------------------------------------------------------
 // Texture definitions
 //--------------------------------------------------------------------------------------
-//Texture2D        UpscaledTexture : register(t0);
-//SamplerState     samLinearClamp : register(s0);
-Texture2D        UpscaledTexture;
-SamplerState     samLinearClamp;
+Texture2D    UpscaledTexture;
+SamplerState samLinearClamp;
 
 //--------------------------------------------------------------------------------------
 // Main function
@@ -36,6 +34,6 @@ SamplerState     samLinearClamp;
 
 float4 mainPS(VERTEX Input) : SV_Target
 {
-    float4 texColor = UpscaledTexture.SampleLevel(samLinearClamp, Input.vTexcoord, 0);
-    return texColor;
+	float4 texColor = UpscaledTexture.SampleLevel(samLinearClamp, Input.vTexcoord, 0);
+	return texColor;
 }

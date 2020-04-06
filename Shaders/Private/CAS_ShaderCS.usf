@@ -17,16 +17,9 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-//cbuffer cb : register(b0)
-//{
-//    uint4 const0;
-//    uint4 const1;
-//};
 uint4 const0;
 uint4 const1;
 
-//Texture2D InputTexture : register(t0);
-//RWTexture2D<float4> OutputTexture : register(u0);
 Texture2D<float4> InputTexture;
 RWTexture2D<float4> OutputTexture;
 
@@ -119,12 +112,4 @@ void mainCS(uint3 LocalThreadId : SV_GroupThreadID, uint3 WorkGroupId : SV_Group
     OutputTexture[ASU2(gxy)] = AF4(c, 1);
     
 #endif
-}
-
-// TEST
-[numthreads(WIDTH, HEIGHT, DEPTH)]
-void mainCS_Test(uint3 LocalThreadId : SV_GroupThreadID, uint3 WorkGroupId : SV_GroupID)
-{
-	float3 TexColor = InputTexture.Load(int3(WorkGroupId.x, WorkGroupId.y, 0)).rgb;
-	OutputTexture[WorkGroupId.xy] = float4(1.0, 1.0, TexColor.b, 1.0);
 }

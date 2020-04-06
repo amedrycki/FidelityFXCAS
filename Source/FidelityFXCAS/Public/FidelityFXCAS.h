@@ -72,11 +72,4 @@ public:
 	FORCEINLINE FIntPoint GetSSCASOutputResolution() const { FScopeLock Lock(&ResolutionInfoCS); return OutputResolution; }
 protected:
 	void SetSSCASResolutionInfo(const FIntPoint& InInputResolution, const FIntPoint& InOutputResolution);
-
-public:
-	// TEST
-	void TEST_SetRT(class UTextureRenderTarget2D* OutputRenderTarget) { TEST_RT = OutputRenderTarget; }
-	void TEST_SetTexture(class UTexture2D* InInputTexture)            { TEST_InputTexture = InInputTexture; }
-	class UTextureRenderTarget2D* TEST_RT;
-	class UTexture2D* TEST_InputTexture;
 };

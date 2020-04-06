@@ -25,10 +25,4 @@ class UFidelityFXCASBlueprintLibrary : public UBlueprintFunctionLibrary
 
 	UFUNCTION(BlueprintCallable, Category = "FidelityFX | CAS")
 	static void DisableFidelityFXSSCAS() { SetIsFidelityFXSSCASEnabled(false); }
-
-	UFUNCTION(BlueprintCallable, Category = "FidelityFX | CAS")
-	static void TEST_SetRT(class UTextureRenderTarget2D* OutputRenderTarget);
-
-	UFUNCTION(BlueprintCallable, Category = "FidelityFX | CAS")
-	static void TEST_SetTexture(class UTexture2D* InInputTexture);
 };

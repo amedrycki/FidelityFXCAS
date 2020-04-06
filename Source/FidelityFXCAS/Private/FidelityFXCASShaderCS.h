@@ -4,12 +4,15 @@
 #include "GlobalShader.h"
 #include "ShaderParameterStruct.h"
 
-class FFidelityFXCASShaderCS : public FGlobalShader
+//-------------------------------------------------------------------------------------------------
+// RHI Version
+//-------------------------------------------------------------------------------------------------
+
+class FFidelityFXCASShaderCS_RHI : public FGlobalShader
 {
-	DECLARE_EXPORTED_SHADER_TYPE(FFidelityFXCASShaderCS, Global, FIDELITYFXCAS_API);
+	DECLARE_EXPORTED_SHADER_TYPE(FFidelityFXCASShaderCS_RHI, Global, FIDELITYFXCAS_API);
 public:
-	//DECLARE_GLOBAL_SHADER(FFidelityFXCASShaderCS);
-	SHADER_USE_PARAMETER_STRUCT(FFidelityFXCASShaderCS, FGlobalShader);
+	SHADER_USE_PARAMETER_STRUCT(FFidelityFXCASShaderCS_RHI, FGlobalShader);
 
 	BEGIN_SHADER_PARAMETER_STRUCT(FParameters, )
 	SHADER_PARAMETER(FUintVector4, const0)
@@ -20,24 +23,24 @@ public:
 
 	static bool ShouldCompilePermutation(const FGlobalShaderPermutationParameters& Parameters);
 	static void ModifyCompilationEnvironment(const FGlobalShaderPermutationParameters& Parameters, FShaderCompilerEnvironment& OutEnvironment);
-
-	//FFidelityFXCASShaderCS() = default;
-	//explicit FFidelityFXCASShaderCS(const ShaderMetaType::CompiledShaderInitializerType& Initializer);
 };
 
 template<bool FP16, bool SHARPEN_ONLY>
-class TFidelityFXCASShaderCS : public FFidelityFXCASShaderCS
+class TFidelityFXCASShaderCS_RHI : public FFidelityFXCASShaderCS_RHI
 {
-	DECLARE_EXPORTED_SHADER_TYPE(TFidelityFXCASShaderCS, Global, FIDELITYFXCAS_API);
+	DECLARE_EXPORTED_SHADER_TYPE(TFidelityFXCASShaderCS_RHI, Global, FIDELITYFXCAS_API);
 public:
-	//DECLARE_GLOBAL_SHADER(TFidelityFXCASShaderCS);
-
 	static bool ShouldCompilePermutation(const FGlobalShaderPermutationParameters& Parameters);
 	static void ModifyCompilationEnvironment(const FGlobalShaderPermutationParameters& Parameters, FShaderCompilerEnvironment& OutEnvironment);
 
-	TFidelityFXCASShaderCS() = default;
-	explicit TFidelityFXCASShaderCS(const ShaderMetaType::CompiledShaderInitializerType& Initializer) : FFidelityFXCASShaderCS(Initializer) { }
+	TFidelityFXCASShaderCS_RHI() = default;
+	explicit TFidelityFXCASShaderCS_RHI(const ShaderMetaType::CompiledShaderInitializerType& Initializer) : FFidelityFXCASShaderCS_RHI(Initializer) { }
 };
+
+typedef TFidelityFXCASShaderCS_RHI<0, 0> TFidelityFXCASShaderCS_RHI_FP32_Upscale;
+typedef TFidelityFXCASShaderCS_RHI<0, 1> TFidelityFXCASShaderCS_RHI_FP32_SharpenOnly;
+typedef TFidelityFXCASShaderCS_RHI<1, 0> TFidelityFXCASShaderCS_RHI_FP16_Upscale;
+typedef TFidelityFXCASShaderCS_RHI<1, 1> TFidelityFXCASShaderCS_RHI_FP16_SharpenOnly;
 
 //-------------------------------------------------------------------------------------------------
 // RDG Version
@@ -47,7 +50,6 @@ class FFidelityFXCASShaderCS_RDG : public FGlobalShader
 {
 	DECLARE_EXPORTED_SHADER_TYPE(FFidelityFXCASShaderCS_RDG, Global, FIDELITYFXCAS_API);
 public:
-	//DECLARE_GLOBAL_SHADER(FFidelityFXCASShaderCS_RDG);
 	SHADER_USE_PARAMETER_STRUCT(FFidelityFXCASShaderCS_RDG, FGlobalShader);
 
 	BEGIN_SHADER_PARAMETER_STRUCT(FParameters, )
@@ -59,9 +61,6 @@ public:
 
 	static bool ShouldCompilePermutation(const FGlobalShaderPermutationParameters& Parameters);
 	static void ModifyCompilationEnvironment(const FGlobalShaderPermutationParameters& Parameters, FShaderCompilerEnvironment& OutEnvironment);
-
-	//FFidelityFXCASShaderCS_RDG() = default;
-	//explicit FFidelityFXCASShaderCS_RDG(const ShaderMetaType::CompiledShaderInitializerType& Initializer);
 };
 
 template<bool FP16, bool SHARPEN_ONLY>
@@ -69,11 +68,14 @@ class TFidelityFXCASShaderCS_RDG : public FFidelityFXCASShaderCS_RDG
 {
 	DECLARE_EXPORTED_SHADER_TYPE(TFidelityFXCASShaderCS_RDG, Global, FIDELITYFXCAS_API);
 public:
-	//DECLARE_GLOBAL_SHADER(TFidelityFXCASShaderCS_RDG);
-
 	static bool ShouldCompilePermutation(const FGlobalShaderPermutationParameters& Parameters);
 	static void ModifyCompilationEnvironment(const FGlobalShaderPermutationParameters& Parameters, FShaderCompilerEnvironment& OutEnvironment);
 
 	TFidelityFXCASShaderCS_RDG() = default;
 	explicit TFidelityFXCASShaderCS_RDG(const ShaderMetaType::CompiledShaderInitializerType& Initializer) : FFidelityFXCASShaderCS_RDG(Initializer) { }
 };
+
+typedef TFidelityFXCASShaderCS_RDG<0, 0> TFidelityFXCASShaderCS_RDG_FP32_Upscale;
+typedef TFidelityFXCASShaderCS_RDG<0, 1> TFidelityFXCASShaderCS_RDG_FP32_SharpenOnly;
+typedef TFidelityFXCASShaderCS_RDG<1, 0> TFidelityFXCASShaderCS_RDG_FP16_Upscale;
+typedef TFidelityFXCASShaderCS_RDG<1, 1> TFidelityFXCASShaderCS_RDG_FP16_SharpenOnly;
