@@ -18,7 +18,9 @@ protected:
 	FIntPoint OutputSize = FIntPoint::ZeroValue;
 
 public:
-	TRefCountPtr<IPooledRenderTarget> CSOutput;
+	TRefCountPtr<IPooledRenderTarget>& CSOutput;
+
+	FFidelityFXCASPassParams(TRefCountPtr<IPooledRenderTarget>& InCSOutput) : CSOutput(InCSOutput) { }
 
 	FORCEINLINE const FIntPoint& GetInputSize() const  { return InputSize; }
 	FORCEINLINE const FIntPoint& GetOutputSize() const { return OutputSize; }
@@ -45,8 +47,9 @@ protected:
 	FTextureRHIRef RTTexture;
 
 public:
-	FFidelityFXCASPassParams_RHI(const FTextureRHIRef& InInputTexture, const FTextureRHIRef& InRTTexture)
-		: InputTexture(InInputTexture)
+	FFidelityFXCASPassParams_RHI(const FTextureRHIRef& InInputTexture, const FTextureRHIRef& InRTTexture, TRefCountPtr<IPooledRenderTarget>& InCSOutput)
+		: FFidelityFXCASPassParams(InCSOutput)
+		, InputTexture(InInputTexture)
 		, RTTexture(InRTTexture)
 	{
 		InputSize = InputTexture.IsValid() ? FIntPoint(InputTexture->GetSizeXYZ().X, InputTexture->GetSizeXYZ().Y) : FIntPoint::ZeroValue;
@@ -70,8 +73,9 @@ protected:
 	FRenderTargetBinding RTBinding;
 
 public:
-	FFidelityFXCASPassParams_RDG(const FRDGTextureRef& InInputTexture, const FRenderTargetBinding& InRTBinding)
-		: InputTexture(InInputTexture)
+	FFidelityFXCASPassParams_RDG(const FRDGTextureRef& InInputTexture, const FRenderTargetBinding& InRTBinding, TRefCountPtr<IPooledRenderTarget>& InCSOutput)
+		: FFidelityFXCASPassParams(InCSOutput)
+		, InputTexture(InInputTexture)
 		, RTBinding(InRTBinding)
 	{
 		InputSize = InputTexture != nullptr ? InputTexture->Desc.Extent : FIntPoint::ZeroValue;

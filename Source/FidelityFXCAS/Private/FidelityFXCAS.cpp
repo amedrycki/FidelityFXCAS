@@ -26,42 +26,34 @@
 //-------------------------------------------------------------------------------------------------
 static TAutoConsoleVariable<int32> CVarFidelityFXCAS_DisplayInfo(
 	TEXT("r.fxcas.DisplayInfo"),
-	1,
+	0,
 	TEXT("Enables onscreen inormation display for AMD FidelityFX CAS plugin.\n")
 	TEXT("<=0: OFF (default)\n")
 	TEXT(" >0: ON"),
 	ECVF_Cheat);
 
-static TAutoConsoleVariable<int32> CVarFidelityFXCAS_SSCAS(
+static TAutoConsoleVariable<bool> CVarFidelityFXCAS_SSCAS(
 	TEXT("r.fxcas.SSCAS"),
 	0,
 	TEXT("Enables screen space contrast adaptive sharpening.\n")
-	TEXT("<=0: OFF (default)\n")
-	TEXT(" >0: ON"),
+	TEXT("0: OFF (default)\n")
+	TEXT("1: ON"),
 	ECVF_Cheat);
 
 static TAutoConsoleVariable<float> CVarFidelityFXCAS_SSCASSharpness(
 	TEXT("r.fxcas.SSCASSharpness"),
-	0,
-	TEXT("Sets the screen space CAS sharpness value.\n")
-	TEXT("0: minimum (lower ringing) (default)\n")
+	0.5f,
+	TEXT("Sets the screen space CAS sharpness value (default: 0.5).\n")
+	TEXT("0: minimum (lower ringing)\n")
 	TEXT("1: maximum (higher ringing)"),
 	ECVF_Cheat);
 
-static TAutoConsoleVariable<int32> CVarFidelityFXCAS_SSCASFP16(
+static TAutoConsoleVariable<bool> CVarFidelityFXCAS_SSCASFP16(
 	TEXT("r.fxcas.SSCASFP16"),
 	0,
 	TEXT("Should the screen space CAS use half precision floats.\n")
-	TEXT("<=0: OFF (normal precision)\n")
-	TEXT(">0: ON (half precision)"),
-	ECVF_Cheat);
-
-static TAutoConsoleVariable<int32> CVarFidelityFXCAS_SSCASNoUpscale(
-	TEXT("r.fxcas.SSCASNoUpscale"),
-	0,
-	TEXT("Test variable to disable upscaling.\n")
-	TEXT("<=0: OFF (with upscaling)\n")
-	TEXT(">0: ON (no upscaling)"),
+	TEXT("0: OFF (normal precision)\n")
+	TEXT("1: ON (half precision)"),
 	ECVF_Cheat);
 
 // Sink to track console variables value changes
@@ -106,7 +98,7 @@ static void FidelityFXCASCVarSink()
 
 	// SS CAS
 	static bool GSSCAS = false;
-	bool bNewSSCAS = CVarFidelityFXCAS_SSCAS.GetValueOnGameThread() > 0;
+	bool bNewSSCAS = CVarFidelityFXCAS_SSCAS.GetValueOnGameThread();
 	if (bNewSSCAS != GSSCAS)
 	{
 		FFidelityFXCASModule::Get().SetIsSSCASEnabled(bNewSSCAS);
@@ -114,7 +106,7 @@ static void FidelityFXCASCVarSink()
 	}
 
 	// SS CAS sharpness
-	static float GSSCASSharpness = 0.0f;
+	static float GSSCASSharpness = 0.5f;
 	float NewSSCASSharpness = FMath::Clamp(CVarFidelityFXCAS_SSCASSharpness.GetValueOnGameThread(), 0.0f, 1.0f);
 	if (!FMath::IsNearlyEqual(NewSSCASSharpness, GSSCASSharpness))
 	{
@@ -124,7 +116,7 @@ static void FidelityFXCASCVarSink()
 
 	// SS CAS half precision
 	static bool GSSCASFP16 = false;
-	bool bNewSSCASFP16 = CVarFidelityFXCAS_SSCASFP16.GetValueOnGameThread() > 0;
+	bool bNewSSCASFP16 = CVarFidelityFXCAS_SSCASFP16.GetValueOnGameThread();
 	if (bNewSSCASFP16 != GSSCASFP16)
 	{
 		FFidelityFXCASModule::Get().SetUseFP16(bNewSSCASFP16);
@@ -150,6 +142,14 @@ FAutoConsoleVariableSink CFidelityFXCASCVarSink(FConsoleCommandDelegate::CreateS
 // FFidelityFXCASModule class implementation
 //-------------------------------------------------------------------------------------------------
 
+FFidelityFXCASModule& FFidelityFXCASModule::Get()
+{
+	static FFidelityFXCASModule* CachedModule = NULL;
+	if (!CachedModule)
+		CachedModule = &FModuleManager::LoadModuleChecked<FFidelityFXCASModule>("FidelityFXCAS");
+	return *CachedModule;
+}
+
 void FFidelityFXCASModule::StartupModule()
 {
 	// This code will execute after your module is loaded into memory; the exact timing is specified in the .uplugin file per-module
@@ -160,7 +160,7 @@ void FFidelityFXCASModule::StartupModule()
 
 	// Reset variables
 	bIsSSCASEnabled = false;
-	SSCASSharpness = 0.0f;
+	SSCASSharpness = 0.5f;
 	OnResolvedSceneColorHandle.Reset();
 }
 
@@ -172,17 +172,13 @@ void FFidelityFXCASModule::ShutdownModule()
 	SetIsSSCASEnabled(false);	// Turn off screen space CAS
 }
 
-bool FFidelityFXCASModule::GetIsSSCASEnabled() const
-{
-	return bIsSSCASEnabled;
-}
-
 void FFidelityFXCASModule::SetIsSSCASEnabled(bool Enabled)
 {
 	if (Enabled != GetIsSSCASEnabled())
 	{
 		bIsSSCASEnabled = Enabled;
 		UpdateSSCASEnabled();
+		CVarFidelityFXCAS_SSCAS->Set(Enabled);
 	}
 }
 
@@ -215,6 +211,24 @@ void FFidelityFXCASModule::UpdateSSCASEnabled()
 	}
 }
 
+void FFidelityFXCASModule::SetSSCASSharpness(float Sharpness)
+{
+	if (!FMath::IsNearlyEqual(Sharpness, SSCASSharpness))
+	{
+		SSCASSharpness = Sharpness;
+		CVarFidelityFXCAS_SSCASSharpness->Set(Sharpness);
+	}
+}
+
+void FFidelityFXCASModule::SetUseFP16(bool UseFP16)
+{
+	if (UseFP16 != bUseFP16)
+	{
+		bUseFP16 = UseFP16;
+		CVarFidelityFXCAS_SSCASFP16->Set(UseFP16);
+	}
+}
+
 void FFidelityFXCASModule::BindResolvedSceneColorCallback(IRendererModule* RendererModule)
 {
 	if (!OnResolvedSceneColorHandle.IsValid())
@@ -238,40 +252,59 @@ void FFidelityFXCASModule::UnbindCustomUpscaleCallback(IRendererModule* Renderer
 	RendererModule->GetCustomUpscalePassCallback().Unbind();
 }
 
-void FFidelityFXCASModule::PrepareComputeShaderOutput(FRHICommandListImmediate& RHICmdList, const FIntPoint& OutputSize, TRefCountPtr<IPooledRenderTarget>& CSOutput)
-{
-	bool NeedsRecreate = false;
-	if (CSOutput.IsValid())
-	{
-		// Check size if already exists
-		FRHITexture2D* RHITexture2D = CSOutput->GetRenderTargetItem().TargetableTexture->GetTexture2D();
-		FIntPoint CurrentSize = RHITexture2D->GetSizeXY();
-		if (CurrentSize != OutputSize)
-		{
-			// Release the shader output if the size changed
-			//GEngine->AddOnScreenDebugMessage(INDEX_NONE, 5.f, FColor::Red, FString::Printf(TEXT("Releasing compute shader output [%dx%d]..."), CurrentSize.X, CurrentSize.Y));
-			//GRenderTargetPool.FreeUnusedResource(CSOutput);
-			NeedsRecreate = true;
-		}
-	}
-
-	// Create the shader output
-	if (!CSOutput.IsValid() || NeedsRecreate)
-	{
-		GEngine->AddOnScreenDebugMessage(INDEX_NONE, 5.f, FColor::Green, FString::Printf(TEXT("Creating compute shader output [%dx%d]..."), OutputSize.X, OutputSize.Y));
-		FPooledRenderTargetDesc CSOutputDesc(FPooledRenderTargetDesc::Create2DDesc(OutputSize, PF_FloatRGBA, FClearValueBinding::None,
-			TexCreate_None, TexCreate_ShaderResource | TexCreate_UAV, false));
-		CSOutputDesc.DebugName = TEXT("FidelityFXCASModule_ComputeShaderOutput");
-		GRenderTargetPool.FindFreeElement(RHICmdList, CSOutputDesc, CSOutput, TEXT("FidelityFXCASModule_ComputeShaderOutput"));
-	}
-}
-
-void FFidelityFXCASModule::OnResolvedSceneColor_RenderThread(FRHICommandListImmediate& RHICmdList, FSceneRenderTargets& SceneContext)
+void FFidelityFXCASModule::PrepareComputeShaderOutput_RenderThread(FRHICommandListImmediate& RHICmdList, const FIntPoint& OutputSize, TRefCountPtr<IPooledRenderTarget>& CSOutput, const TCHAR* InDebugName)
 {
 	check(IsInRenderingThread());
 
-	QUICK_SCOPE_CYCLE_COUNTER(STAT_FidelityFXCASModule_Render);	// Used to gather CPU profiling data for the UE4 session frontend
-	SCOPED_DRAW_EVENT(RHICmdList, FidelityFXCASModule_Render);	// Used to profile GPU activity and add metadata to be consumed by for example RenderDoc
+	static const TCHAR* GFXCASCSOutputDebugName = TEXT("FidelityFXCASModule_CSOutput");
+	const TCHAR* DebugName = InDebugName ? InDebugName : GFXCASCSOutputDebugName;
+
+	bool bNeedsRecreate = false;
+	if (CSOutput.IsValid())
+	{
+		// If the render target already exists, check if the size hasn't changed
+		FRHITexture2D* RHITexture2D = CSOutput->GetRenderTargetItem().TargetableTexture->GetTexture2D();
+		bNeedsRecreate = (!RHITexture2D || (RHITexture2D->GetSizeXY() != OutputSize));
+	}
+
+	if (bNeedsRecreate)
+	{
+		// Release the shader output
+		GEngine->AddOnScreenDebugMessage(INDEX_NONE, 2.f, FColor::Silver, FString::Printf(TEXT("Releasing compute shader output...")));
+		GRenderTargetPool.FreeUnusedResource(CSOutput);
+	}
+
+	// Create the shader output
+	if (!CSOutput.IsValid() || bNeedsRecreate)
+	{
+		GEngine->AddOnScreenDebugMessage(INDEX_NONE, 2.f, FColor::Silver, FString::Printf(TEXT("Creating compute shader output [%dx%d]..."), OutputSize.X, OutputSize.Y));
+		FPooledRenderTargetDesc CSOutputDesc(FPooledRenderTargetDesc::Create2DDesc(OutputSize, PF_FloatRGBA, FClearValueBinding::None,
+			TexCreate_None, TexCreate_ShaderResource | TexCreate_UAV, false));
+		CSOutputDesc.DebugName = DebugName;
+		GRenderTargetPool.FindFreeElement(RHICmdList, CSOutputDesc, CSOutput, DebugName);
+	}
+}
+
+void FFidelityFXCASModule::InitSSCASCSOutputs(const FIntPoint& Size)
+{
+	ENQUEUE_RENDER_COMMAND(FidelityFXCAS_InitSSCASCSOutputs)(
+		[this, Size](FRHICommandListImmediate& RHICmdList)
+		{
+			QUICK_SCOPE_CYCLE_COUNTER(STAT_FidelityFXCASBP_InitSSCASCSOutputs); // Used to gather CPU profiling data for the UE4 session frontend
+			SCOPED_DRAW_EVENT(RHICmdList, FidelityFXCASBP_InitSSCASCSOutputs);  // Used to profile GPU activity and add metadata to be consumed by for example RenderDoc
+
+			PrepareComputeShaderOutput_RenderThread(GRHICommandList.GetImmediateCommandList(), Size, ComputeShaderOutput_RHI);
+			PrepareComputeShaderOutput_RenderThread(GRHICommandList.GetImmediateCommandList(), Size, ComputeShaderOutput_RDG);
+		}
+	);
+}
+
+void FFidelityFXCASModule::OnResolvedSceneColor_RenderThread(FRHICommandListImmediate& RHICmdList, class FSceneRenderTargets& SceneContext)
+{
+	check(IsInRenderingThread());
+
+	QUICK_SCOPE_CYCLE_COUNTER(STAT_FidelityFXCASModule_OnResolvedSceneColor); // Used to gather CPU profiling data for the UE4 session frontend
+	SCOPED_DRAW_EVENT(RHICmdList, FidelityFXCASModule_OnResolvedSceneColor);  // Used to profile GPU activity and add metadata to be consumed by for example RenderDoc
 
 	const FTextureRHIRef& SceneColorTexture = SceneContext.GetSceneColorTexture();
 	if (!SceneColorTexture.IsValid())
@@ -280,35 +313,35 @@ void FFidelityFXCASModule::OnResolvedSceneColor_RenderThread(FRHICommandListImme
 	if (!SceneColorTexture2D)
 		return;
 
-	FFidelityFXCASPassParams_RHI CASPassParams(SceneColorTexture, SceneColorTexture);
+	// Prepare pass parameters
+	FFidelityFXCASPassParams_RHI CASPassParams(SceneColorTexture, SceneColorTexture, ComputeShaderOutput_RHI);
 
 	// Update resolution info
 	SetSSCASResolutionInfo(CASPassParams.GetInputSize(), CASPassParams.GetOutputSize());
 
-	// Make sure the computer shader output is ready and with correct size
-	PrepareComputeShaderOutput(RHICmdList, CASPassParams.GetOutputSize(), ComputeShaderOutput_RHI);
-	CASPassParams.CSOutput = ComputeShaderOutput_RHI;
+	// Make sure the computer shader output is ready and has the correct size
+	PrepareComputeShaderOutput_RenderThread(RHICmdList, CASPassParams.GetOutputSize(), CASPassParams.CSOutput);
 
 	// Call shaders
 	RunComputeShader_RHI_RenderThread(RHICmdList, CASPassParams);
 	DrawToRenderTarget_RHI_RenderThread(RHICmdList, CASPassParams);
 }
 
-void FFidelityFXCASModule::OnAddUpscalePass_RenderThread(FRDGBuilder& GraphBuilder, FRDGTexture* SceneColor, const FRenderTargetBinding& RTBinding)
+void FFidelityFXCASModule::OnAddUpscalePass_RenderThread(class FRDGBuilder& GraphBuilder, class FRDGTexture* SceneColor, const FRenderTargetBinding& RTBinding)
 {
 	check(IsInRenderingThread());
 
-	QUICK_SCOPE_CYCLE_COUNTER(STAT_FidelityFXCASModule_Render);	// Used to gather CPU profiling data for the UE4 session frontend
-	SCOPED_DRAW_EVENT(GraphBuilder.RHICmdList, FidelityFXCASModule_Render);	// Used to profile GPU activity and add metadata to be consumed by for example RenderDoc
+	QUICK_SCOPE_CYCLE_COUNTER(STAT_FidelityFXCASModule_OnAddUpscalePass);             // Used to gather CPU profiling data for the UE4 session frontend
+	SCOPED_DRAW_EVENT(GraphBuilder.RHICmdList, FidelityFXCASModule_OnAddUpscalePass); // Used to profile GPU activity and add metadata to be consumed by for example RenderDoc
 
-	FFidelityFXCASPassParams_RDG CASPassParams(SceneColor, RTBinding);
+	// Prepare pass parameters
+	FFidelityFXCASPassParams_RDG CASPassParams(SceneColor, RTBinding, ComputeShaderOutput_RDG);
 
 	// Update resolution info
 	SetSSCASResolutionInfo(CASPassParams.GetInputSize(), CASPassParams.GetOutputSize());
 
-	// Make sure the computer shader output is ready and with correct size
-	PrepareComputeShaderOutput(GraphBuilder.RHICmdList, CASPassParams.GetOutputSize(), ComputeShaderOutput_RDG);
-	CASPassParams.CSOutput = ComputeShaderOutput_RDG;
+	// Make sure the computer shader output is ready and has the correct size
+	PrepareComputeShaderOutput_RenderThread(GraphBuilder.RHICmdList, CASPassParams.GetOutputSize(), CASPassParams.CSOutput);
 
 	// Call shaders
 	RunComputeShader_RDG_RenderThread(GraphBuilder, CASPassParams);
@@ -317,8 +350,10 @@ void FFidelityFXCASModule::OnAddUpscalePass_RenderThread(FRDGBuilder& GraphBuild
 
 void FFidelityFXCASModule::RunComputeShader_RHI_RenderThread(FRHICommandListImmediate& RHICmdList, const class FFidelityFXCASPassParams_RHI& CASPassParams)
 {
-	QUICK_SCOPE_CYCLE_COUNTER(STAT_FidelityFXCASModule_ComputeShader_RHI);	// Used to gather CPU profiling data for the UE4 session frontend
-	SCOPED_DRAW_EVENT(RHICmdList, FidelityFXCASModule_ComputeShader_RHI);	// Used to profile GPU activity and add metadata to be consumed by for example RenderDoc
+	check(IsInRenderingThread());
+
+	QUICK_SCOPE_CYCLE_COUNTER(STAT_FidelityFXCASModule_RunComputeShader_RHI); // Used to gather CPU profiling data for the UE4 session frontend
+	SCOPED_DRAW_EVENT(RHICmdList, FidelityFXCASModule_RunComputeShader_RHI);  // Used to profile GPU activity and add metadata to be consumed by for example RenderDoc
 
 	UnbindRenderTargets(RHICmdList);
 	RHICmdList.TransitionResource(EResourceTransitionAccess::ERWBarrier, EResourceTransitionPipeline::EGfxToCompute, CASPassParams.GetUAV());
@@ -334,8 +369,6 @@ void FFidelityFXCASModule::RunComputeShader_RHI_RenderThread(FRHICommandListImme
 
 	// Choose shader version and dispatch
 	bool SharpenOnly = (CASPassParams.GetInputSize() == CASPassParams.GetOutputSize());
-	if (CVarFidelityFXCAS_SSCASNoUpscale.GetValueOnGameThread() > 0)
-		SharpenOnly = true;
 	if (bUseFP16 && SharpenOnly)
 	{
 		TShaderMapRef<TFidelityFXCASShaderCS_RHI_FP16_SharpenOnly> ComputeShader(GetGlobalShaderMap(GMaxRHIFeatureLevel));
@@ -360,8 +393,10 @@ void FFidelityFXCASModule::RunComputeShader_RHI_RenderThread(FRHICommandListImme
 
 void FFidelityFXCASModule::RunComputeShader_RDG_RenderThread(FRDGBuilder& GraphBuilder, const class FFidelityFXCASPassParams_RDG& CASPassParams)
 {
-	QUICK_SCOPE_CYCLE_COUNTER(STAT_FidelityFXCASModule_ComputeShader_RDG);				// Used to gather CPU profiling data for the UE4 session frontend
-	SCOPED_DRAW_EVENT(GraphBuilder.RHICmdList, FidelityFXCASModule_ComputeShader_RDG);	// Used to profile GPU activity and add metadata to be consumed by for example RenderDoc
+	check(IsInRenderingThread());
+
+	QUICK_SCOPE_CYCLE_COUNTER(STAT_FidelityFXCASModule_RunComputeShader_RDG);             // Used to gather CPU profiling data for the UE4 session frontend
+	SCOPED_DRAW_EVENT(GraphBuilder.RHICmdList, FidelityFXCASModule_RunComputeShader_RDG); // Used to profile GPU activity and add metadata to be consumed by for example RenderDoc
 
 	// Setup shader parameters
 	FFidelityFXCASShaderCS_RDG::FParameters* PassParameters = GraphBuilder.AllocParameters<FFidelityFXCASShaderCS_RDG::FParameters>();
@@ -374,8 +409,6 @@ void FFidelityFXCASModule::RunComputeShader_RDG_RenderThread(FRDGBuilder& GraphB
 
 	// Choose shader version and dispatch
 	bool SharpenOnly = (CASPassParams.GetInputSize() == CASPassParams.GetOutputSize());
-	if (CVarFidelityFXCAS_SSCASNoUpscale.GetValueOnGameThread() > 0)
-		SharpenOnly = true;
 	if (bUseFP16 && SharpenOnly)
 	{
 		TShaderMapRef<TFidelityFXCASShaderCS_RDG<true, true>> ComputeShader(GetGlobalShaderMap(GMaxRHIFeatureLevel));
@@ -418,8 +451,10 @@ FIntVector FFidelityFXCASModule::GetDispatchGroupCount(FIntPoint OutputSize)
 
 void FFidelityFXCASModule::DrawToRenderTarget_RHI_RenderThread(FRHICommandListImmediate& RHICmdList, const class FFidelityFXCASPassParams_RHI& CASPassParams)
 {
-	QUICK_SCOPE_CYCLE_COUNTER(STAT_FidelityFXCASModule_PixelShader);	// Used to gather CPU profiling data for the UE4 session frontend
-	SCOPED_DRAW_EVENT(RHICmdList, FidelityFXCASModule_PixelShader);		// Used to profile GPU activity and add metadata to be consumed by for example RenderDoc
+	check(IsInRenderingThread());
+
+	QUICK_SCOPE_CYCLE_COUNTER(STAT_FidelityFXCASModule_DrawToRenderTarget_RHI); // Used to gather CPU profiling data for the UE4 session frontend
+	SCOPED_DRAW_EVENT(RHICmdList, FidelityFXCASModule_DrawToRenderTarget_RHI);  // Used to profile GPU activity and add metadata to be consumed by for example RenderDoc
 
 	FRHIRenderPassInfo RenderPassInfo(CASPassParams.GetRTTexture(), ERenderTargetActions::Clear_Store);
 	RHICmdList.BeginRenderPass(RenderPassInfo, TEXT("FidelityFXCASModule_DrawToRenderTarget_RHI_RenderThread"));
@@ -459,8 +494,10 @@ void FFidelityFXCASModule::DrawToRenderTarget_RHI_RenderThread(FRHICommandListIm
 
 void FFidelityFXCASModule::DrawToRenderTarget_RDG_RenderThread(FRDGBuilder& GraphBuilder, const class FFidelityFXCASPassParams_RDG& CASPassParams)
 {
-	QUICK_SCOPE_CYCLE_COUNTER(STAT_FidelityFXCASModule_PixelShader);				// Used to gather CPU profiling data for the UE4 session frontend
-	SCOPED_DRAW_EVENT(GraphBuilder.RHICmdList, FidelityFXCASModule_PixelShader);	// Used to profile GPU activity and add metadata to be consumed by for example RenderDoc
+	check(IsInRenderingThread());
+
+	QUICK_SCOPE_CYCLE_COUNTER(STAT_FidelityFXCASModule_DrawToRenderTarget_RDG);             // Used to gather CPU profiling data for the UE4 session frontend
+	SCOPED_DRAW_EVENT(GraphBuilder.RHICmdList, FidelityFXCASModule_DrawToRenderTarget_RDG); // Used to profile GPU activity and add metadata to be consumed by for example RenderDoc
 
 	auto ShaderMap = GetGlobalShaderMap(GMaxRHIFeatureLevel);
 	TShaderMapRef<FFidelityFXCASShaderVS> VertexShader(ShaderMap);

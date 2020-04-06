@@ -7,17 +7,19 @@
 
 class FFidelityFXCASModule : public IModuleInterface
 {
+	friend class UFidelityFXCASBlueprintLibrary;
+
 public:
 	// Static accessors
-	static FORCEINLINE FFidelityFXCASModule& Get() { return FModuleManager::LoadModuleChecked<FFidelityFXCASModule>("FidelityFXCAS"); }
-	static FORCEINLINE bool IsAvailable()          { return FModuleManager::Get().IsModuleLoaded("FidelityFXCAS"); }
+	static FORCEINLINE bool IsAvailable() { return FModuleManager::Get().IsModuleLoaded("FidelityFXCAS"); }
+	static FFidelityFXCASModule& Get();
 
 	// IModuleInterface implementation
 	virtual void StartupModule() override;
 	virtual void ShutdownModule() override;
 
 	// Screen space post process CAS enable / disable
-	bool GetIsSSCASEnabled() const;
+	bool GetIsSSCASEnabled() const { return bIsSSCASEnabled; }
 	void SetIsSSCASEnabled(bool Enabled);
 	FORCEINLINE void EnableSSCAS()  { SetIsSSCASEnabled(true); }
 	FORCEINLINE void DisableSSCAS() { SetIsSSCASEnabled(false); }
@@ -33,10 +35,10 @@ protected:
 
 	// Screen space shader params
 public:
-	FORCEINLINE float GetSSCASSharpness() const         { return SSCASSharpness; }
-	FORCEINLINE void SetSSCASSharpness(float Sharpness) { SSCASSharpness = Sharpness; }
-	FORCEINLINE bool GetUseFP16() const                 { return bUseFP16; }
-	FORCEINLINE void SetUseFP16(bool UseFP16)           { bUseFP16 = UseFP16; }
+	float GetSSCASSharpness() const { return SSCASSharpness; }
+	void SetSSCASSharpness(float Sharpness);
+	bool GetUseFP16() const { return bUseFP16; }
+	void SetUseFP16(bool UseFP16);
 protected:
 	float SSCASSharpness = 0.0f;
 	bool bUseFP16 = false;
@@ -44,7 +46,12 @@ protected:
 	// Compute shader output
 	TRefCountPtr<IPooledRenderTarget> ComputeShaderOutput_RHI;
 	TRefCountPtr<IPooledRenderTarget> ComputeShaderOutput_RDG;
-	void PrepareComputeShaderOutput(FRHICommandListImmediate& RHICmdList, const FIntPoint& OutputSize, TRefCountPtr<IPooledRenderTarget>& CSOutput);
+	void PrepareComputeShaderOutput_RenderThread(FRHICommandListImmediate& RHICmdList, const FIntPoint& OutputSize,
+		TRefCountPtr<IPooledRenderTarget>& CSOutput, const TCHAR* InDebugName = nullptr);
+public:
+	// Allows early initialization of compute shader outputs (i.e. during loading)
+	// If not called the outputs will be lazy-loaded during the first render
+	void InitSSCASCSOutputs(const FIntPoint& Size);
 
 	// SSCAS (no upscale) using Renderer's ResolvedSceneColor callback (RHI)
 	FDelegateHandle OnResolvedSceneColorHandle;	// Post process render pipeline hook and handle
