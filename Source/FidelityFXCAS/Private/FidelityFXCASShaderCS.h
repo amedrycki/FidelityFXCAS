@@ -42,6 +42,7 @@ typedef TFidelityFXCASShaderCS_RHI<0, 1> TFidelityFXCASShaderCS_RHI_FP32_Sharpen
 typedef TFidelityFXCASShaderCS_RHI<1, 0> TFidelityFXCASShaderCS_RHI_FP16_Upscale;
 typedef TFidelityFXCASShaderCS_RHI<1, 1> TFidelityFXCASShaderCS_RHI_FP16_SharpenOnly;
 
+#if FX_CAS_CUSTOM_UPSCALE_CALLBACK
 //-------------------------------------------------------------------------------------------------
 // RDG Version
 //-------------------------------------------------------------------------------------------------
@@ -79,3 +80,5 @@ typedef TFidelityFXCASShaderCS_RDG<0, 0> TFidelityFXCASShaderCS_RDG_FP32_Upscale
 typedef TFidelityFXCASShaderCS_RDG<0, 1> TFidelityFXCASShaderCS_RDG_FP32_SharpenOnly;
 typedef TFidelityFXCASShaderCS_RDG<1, 0> TFidelityFXCASShaderCS_RDG_FP16_Upscale;
 typedef TFidelityFXCASShaderCS_RDG<1, 1> TFidelityFXCASShaderCS_RDG_FP16_SharpenOnly;
+
+#endif // FX_CAS_CUSTOM_UPSCALE_CALLBACK

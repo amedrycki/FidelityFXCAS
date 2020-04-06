@@ -28,6 +28,7 @@ public:
 
 IMPLEMENT_GLOBAL_SHADER(FFidelityFXCASShaderPS_RHI, "/Plugin/FidelityFXCAS/Private/CAS_ShaderPS.usf", "mainPS", SF_Pixel);
 
+#if FX_CAS_CUSTOM_UPSCALE_CALLBACK
 //-------------------------------------------------------------------------------------------------
 // RDG Version
 //-------------------------------------------------------------------------------------------------
@@ -52,3 +53,5 @@ public:
 };
 
 IMPLEMENT_GLOBAL_SHADER(FFidelityFXCASShaderPS_RDG, "/Plugin/FidelityFXCAS/Private/CAS_ShaderPS.usf", "mainPS", SF_Pixel);
+
+#endif // FX_CAS_CUSTOM_UPSCALE_CALLBACK

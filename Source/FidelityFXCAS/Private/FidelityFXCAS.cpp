@@ -123,6 +123,7 @@ static void FidelityFXCASCVarSink()
 		GSSCASFP16 = bNewSSCASFP16;
 	}
 
+#if FX_CAS_CUSTOM_UPSCALE_CALLBACK
 	// Screen percentage
 	static const TConsoleVariableData<float>* CVarScreenPercentage = IConsoleManager::Get().FindTConsoleVariableDataFloat(TEXT("r.ScreenPercentage"));
 	if (CVarScreenPercentage)
@@ -135,6 +136,7 @@ static void FidelityFXCASCVarSink()
 			GScreenPercentage = NewScreenPercentage;
 		}
 	}
+#endif // FX_CAS_CUSTOM_UPSCALE_CALLBACK
 }
 FAutoConsoleVariableSink CFidelityFXCASCVarSink(FConsoleCommandDelegate::CreateStatic(&FidelityFXCASCVarSink));
 
@@ -189,6 +191,7 @@ void FFidelityFXCASModule::UpdateSSCASEnabled()
 
 	if (bIsSSCASEnabled)
 	{
+#if FX_CAS_CUSTOM_UPSCALE_CALLBACK
 		bool bUpscale = false;
 		static const TConsoleVariableData<float>* CVarScreenPercentage = IConsoleManager::Get().FindTConsoleVariableDataFloat(TEXT("r.ScreenPercentage"));
 		if (CVarScreenPercentage)
@@ -203,11 +206,16 @@ void FFidelityFXCASModule::UpdateSSCASEnabled()
 			UnbindCustomUpscaleCallback(RendererModule);
 			BindResolvedSceneColorCallback(RendererModule);
 		}
+#else // FX_CAS_CUSTOM_UPSCALE_CALLBACK
+		BindResolvedSceneColorCallback(RendererModule);
+#endif // FX_CAS_CUSTOM_UPSCALE_CALLBACK
 	}
 	else
 	{
 		UnbindResolvedSceneColorCallback(RendererModule);
+#if FX_CAS_CUSTOM_UPSCALE_CALLBACK
 		UnbindCustomUpscaleCallback(RendererModule);
+#endif // FX_CAS_CUSTOM_UPSCALE_CALLBACK
 	}
 }
 
@@ -241,6 +249,7 @@ void FFidelityFXCASModule::UnbindResolvedSceneColorCallback(IRendererModule* Ren
 	OnResolvedSceneColorHandle.Reset();
 }
 
+#if FX_CAS_CUSTOM_UPSCALE_CALLBACK
 void FFidelityFXCASModule::BindCustomUpscaleCallback(IRendererModule* RendererModule)
 {
 	if (!RendererModule->GetCustomUpscalePassCallback().IsBound())
@@ -251,6 +260,7 @@ void FFidelityFXCASModule::UnbindCustomUpscaleCallback(IRendererModule* Renderer
 {
 	RendererModule->GetCustomUpscalePassCallback().Unbind();
 }
+#endif // FX_CAS_CUSTOM_UPSCALE_CALLBACK
 
 void FFidelityFXCASModule::PrepareComputeShaderOutput_RenderThread(FRHICommandListImmediate& RHICmdList, const FIntPoint& OutputSize, TRefCountPtr<IPooledRenderTarget>& CSOutput, const TCHAR* InDebugName)
 {
@@ -294,7 +304,9 @@ void FFidelityFXCASModule::InitSSCASCSOutputs(const FIntPoint& Size)
 			SCOPED_DRAW_EVENT(RHICmdList, FidelityFXCASBP_InitSSCASCSOutputs);  // Used to profile GPU activity and add metadata to be consumed by for example RenderDoc
 
 			PrepareComputeShaderOutput_RenderThread(GRHICommandList.GetImmediateCommandList(), Size, ComputeShaderOutput_RHI);
+#if FX_CAS_CUSTOM_UPSCALE_CALLBACK
 			PrepareComputeShaderOutput_RenderThread(GRHICommandList.GetImmediateCommandList(), Size, ComputeShaderOutput_RDG);
+#endif // FX_CAS_CUSTOM_UPSCALE_CALLBACK
 		}
 	);
 }
@@ -327,6 +339,7 @@ void FFidelityFXCASModule::OnResolvedSceneColor_RenderThread(FRHICommandListImme
 	DrawToRenderTarget_RHI_RenderThread(RHICmdList, CASPassParams);
 }
 
+#if FX_CAS_CUSTOM_UPSCALE_CALLBACK
 void FFidelityFXCASModule::OnAddUpscalePass_RenderThread(class FRDGBuilder& GraphBuilder, class FRDGTexture* SceneColor, const FRenderTargetBinding& RTBinding)
 {
 	check(IsInRenderingThread());
@@ -347,6 +360,7 @@ void FFidelityFXCASModule::OnAddUpscalePass_RenderThread(class FRDGBuilder& Grap
 	RunComputeShader_RDG_RenderThread(GraphBuilder, CASPassParams);
 	DrawToRenderTarget_RDG_RenderThread(GraphBuilder, CASPassParams);
 }
+#endif	// FX_CAS_CUSTOM_UPSCALE_CALLBACK
 
 void FFidelityFXCASModule::RunComputeShader_RHI_RenderThread(FRHICommandListImmediate& RHICmdList, const class FFidelityFXCASPassParams_RHI& CASPassParams)
 {
@@ -391,6 +405,7 @@ void FFidelityFXCASModule::RunComputeShader_RHI_RenderThread(FRHICommandListImme
 	}
 }
 
+#if FX_CAS_CUSTOM_UPSCALE_CALLBACK
 void FFidelityFXCASModule::RunComputeShader_RDG_RenderThread(FRDGBuilder& GraphBuilder, const class FFidelityFXCASPassParams_RDG& CASPassParams)
 {
 	check(IsInRenderingThread());
@@ -438,6 +453,7 @@ void FFidelityFXCASModule::RunComputeShader_RDG_RenderThread(FRDGBuilder& GraphB
 			*ComputeShader, PassParameters, GetDispatchGroupCount(CASPassParams.GetOutputSize()));
 	}
 }
+#endif // FX_CAS_CUSTOM_UPSCALE_CALLBACK
 
 FIntVector FFidelityFXCASModule::GetDispatchGroupCount(FIntPoint OutputSize)
 {
@@ -492,6 +508,7 @@ void FFidelityFXCASModule::DrawToRenderTarget_RHI_RenderThread(FRHICommandListIm
 	RHICmdList.EndRenderPass();
 }
 
+#if FX_CAS_CUSTOM_UPSCALE_CALLBACK
 void FFidelityFXCASModule::DrawToRenderTarget_RDG_RenderThread(FRDGBuilder& GraphBuilder, const class FFidelityFXCASPassParams_RDG& CASPassParams)
 {
 	check(IsInRenderingThread());
@@ -534,6 +551,7 @@ void FFidelityFXCASModule::DrawToRenderTarget_RDG_RenderThread(FRDGBuilder& Grap
 		RHICmdList.DrawPrimitive(0, 2, 1);
 	});
 }
+#endif // FX_CAS_CUSTOM_UPSCALE_CALLBACK
 
 void FFidelityFXCASModule::GetSSCASResolutionInfo(FIntPoint& OutInputResolution, FIntPoint& OutOutputResolution) const
 {

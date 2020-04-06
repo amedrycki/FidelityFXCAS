@@ -38,6 +38,7 @@ void TFidelityFXCASShaderCS_RHI<FP16, SHARPEN_ONLY>::ModifyCompilationEnvironmen
 	OutEnvironment.SetDefine(TEXT("CAS_SAMPLE_SHARPEN_ONLY"), SHARPEN_ONLY ? 1 : 0);
 }
 
+#if FX_CAS_CUSTOM_UPSCALE_CALLBACK
 //-------------------------------------------------------------------------------------------------
 // RDG Version
 //-------------------------------------------------------------------------------------------------
@@ -75,3 +76,5 @@ void TFidelityFXCASShaderCS_RDG<FP16, SHARPEN_ONLY>::ModifyCompilationEnvironmen
 	OutEnvironment.SetDefine(TEXT("CAS_SAMPLE_FP16"), FP16 ? 1 : 0);
 	OutEnvironment.SetDefine(TEXT("CAS_SAMPLE_SHARPEN_ONLY"), SHARPEN_ONLY ? 1 : 0);
 }
+
+#endif // FX_CAS_CUSTOM_UPSCALE_CALLBACK

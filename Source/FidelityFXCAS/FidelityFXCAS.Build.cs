@@ -4,42 +4,41 @@ using UnrealBuildTool;
 
 public class FidelityFXCAS : ModuleRules
 {
-	public FidelityFXCAS(ReadOnlyTargetRules Target) : base(Target)
-	{
-		PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
+    public FidelityFXCAS(ReadOnlyTargetRules Target) : base(Target)
+    {
+        PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
 
-		// List of modules names (no path needed) with header files that our module's public headers needs access to, but we don't need to "import" or link against.
-		PublicIncludePathModuleNames.AddRange(
-			new string[]
-			{
-			});
+        // List of modules names (no path needed) with header files that our module's public headers needs access to, but we don't need to "import" or link against.
+        PublicIncludePathModuleNames.AddRange(
+            new string[]
+            {
+            });
 
-		// List of public dependency module names (no path needed) (automatically does the private/public include). These are modules that are required by our public source files.
-		PublicDependencyModuleNames.AddRange(
-			new string[]
-			{
-				"Core",
-				"Engine",
-				"RenderCore",
-				"RHI"
+        // List of public dependency module names (no path needed) (automatically does the private/public include). These are modules that are required by our public source files.
+        PublicDependencyModuleNames.AddRange(
+            new string[]
+            {
+                "Core",
+                "Engine",
+                "RenderCore",
+                "RHI"
 				// ... add other public dependencies that you statically link with here ...
-			}
-			);
+			});
 
         // List of modules name (no path needed) with header files that our module's private code files needs access to, but we don't need to "import" or link against.
         PrivateIncludePathModuleNames.AddRange(
-			new string[]
-			{
-			});
+            new string[]
+            {
+            });
 
         // List of private dependency module names. These are modules that our private code depends on but nothing in our public include files depend on.
         PrivateDependencyModuleNames.AddRange(
-			new string[]
-			{
-				"CoreUObject",
-				"Engine",
-				"Projects",
-				"Renderer"
+            new string[]
+            {
+                "CoreUObject",
+                "Engine",
+                "Projects",
+                "Renderer"
 				// ... add private dependencies that you statically link with here ...	
 			});
 
@@ -61,5 +60,11 @@ public class FidelityFXCAS : ModuleRules
             {
 				// ... add any modules that your module loads dynamically here ...
 			});
+
+        // Change the following to 1 to enable upscaling, after you've modified the UE sources by adding upscale callback
+        PublicDefinitions.Add("FX_CAS_CUSTOM_UPSCALE_CALLBACK=1");
+
+		// So far FX CAS only works on Windows
+		// TODO: Add macro to enable / disable the whole thing
     }
 }

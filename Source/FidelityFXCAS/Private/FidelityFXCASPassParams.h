@@ -60,6 +60,7 @@ public:
 	FORCEINLINE const FTextureRHIRef& GetRTTexture() const    { return RTTexture; }
 };
 
+#if FX_CAS_CUSTOM_UPSCALE_CALLBACK
 //-------------------------------------------------------------------------------------------------
 // RDG Version
 //-------------------------------------------------------------------------------------------------
@@ -85,3 +86,5 @@ public:
 	FORCEINLINE const FRDGTextureRef& GetInputTexture() const    { return InputTexture; }
 	FORCEINLINE const FRenderTargetBinding& GetRTBinding() const { return RTBinding; }
 };
+
+#endif // FX_CAS_CUSTOM_UPSCALE_CALLBACK
