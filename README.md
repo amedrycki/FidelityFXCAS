@@ -121,6 +121,9 @@ After making the changes to the source code you will have to compile your projec
 
 # Usage
 
+## Usage example
+For a working example see the [FidelityFXCASExample](https://github.com/amedrycki/FidelityFXCASExample) repository containing a working Unreal Engine (v4.24) C++ project.
+
 ## Screen space CAS
 After running your game open the console (by pressing `` ` ``) and use the follwing console variables:
 - `r.fxcas.DisplayInfo` - Enables onscreen inormation display for AMD FidelityFX CAS plugin.
