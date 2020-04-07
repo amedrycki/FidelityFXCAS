@@ -62,7 +62,7 @@ public class FidelityFXCAS : ModuleRules
 			});
 
         // Change the following to 1 to enable upscaling, after you've modified the UE sources by adding upscale callback
-        PublicDefinitions.Add("FX_CAS_CUSTOM_UPSCALE_CALLBACK=1");
+        PublicDefinitions.Add("FX_CAS_CUSTOM_UPSCALE_CALLBACK=0");
 
 		// So far FX CAS only works on Windows
 		// TODO: Add macro to enable / disable the whole thing
