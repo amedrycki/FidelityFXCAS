@@ -62,7 +62,7 @@ void UFidelityFXCASBlueprintLibrary::InitCSOutput(class UTextureRenderTarget2D* 
 	);
 }
 
-void UFidelityFXCASBlueprintLibrary::DrawToRenderTarget(const UObject* WorldContextObject, class UTextureRenderTarget2D* InOutputRenderTarget, class UTexture2D* InInputTexture)
+void UFidelityFXCASBlueprintLibrary::DrawToRenderTarget(/*const UObject* WorldContextObject, */class UTextureRenderTarget2D* InOutputRenderTarget, class UTexture2D* InInputTexture)
 {
 	// Check input texture
 	if (!InInputTexture)

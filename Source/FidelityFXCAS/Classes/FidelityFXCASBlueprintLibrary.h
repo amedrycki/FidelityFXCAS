@@ -45,5 +45,5 @@ class UFidelityFXCASBlueprintLibrary : public UBlueprintFunctionLibrary
 	static void InitCSOutput(class UTextureRenderTarget2D* InOutputRenderTarget);
 
 	UFUNCTION(BlueprintCallable, Category = "FidelityFX | CAS", meta = (WorldContext = "WorldContextObject"))
-	static void DrawToRenderTarget(const UObject* WorldContextObject, class UTextureRenderTarget2D* InOutputRenderTarget, class UTexture2D* InInputTexture);
+	static void DrawToRenderTarget(/*const UObject* WorldContextObject, */class UTextureRenderTarget2D* InOutputRenderTarget, class UTexture2D* InInputTexture);
 };
