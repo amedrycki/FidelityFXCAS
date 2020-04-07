@@ -5,7 +5,7 @@
 #include "CoreMinimal.h"
 #include "Modules/ModuleManager.h"
 
-class FFidelityFXCASModule : public IModuleInterface
+class FIDELITYFXCAS_API FFidelityFXCASModule : public IModuleInterface
 {
 	friend class UFidelityFXCASBlueprintLibrary;
 
@@ -57,6 +57,7 @@ public:
 	// If not called the outputs will be lazy-loaded during the first render
 	void InitSSCASCSOutputs(const FIntPoint& Size);
 
+protected:
 	// SSCAS (no upscale) using Renderer's ResolvedSceneColor callback (RHI)
 	FDelegateHandle OnResolvedSceneColorHandle;	// Post process render pipeline hook and handle
 	void OnResolvedSceneColor_RenderThread(FRHICommandListImmediate& RHICmdList, class FSceneRenderTargets& SceneContext);
