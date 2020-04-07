@@ -32,7 +32,7 @@ To add the plugin to your project:
 1. Enable the plugin in your 
   1. Open your project in Unreal Editor and choose **Edit -> Plugins** from the menu to open the **Plugins** manager window.
   1. The plugin should be visible in the category **Project -> Rendering**.
-  1. Select the plugin and check **Enable**. You may be asked to rebuild the plugin and restart the editor.
+  1. Select the **FidelityFXCAS** plugin and check **Enable**. You may be asked to rebuild the plugin and restart the editor.
 
 ## [Optional] Unreal Engine source code modification to enable screen space CAS with upsampling
 This step is only required to enable the CAS screen space upsampling plugin functionality. If you skip this step you may still use other plugin functionalities.
