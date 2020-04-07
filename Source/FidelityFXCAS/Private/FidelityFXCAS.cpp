@@ -69,10 +69,14 @@ static void FidelityFXCASCVarSink()
 		if (bNewDisplayInfo)
 		{
 			Handle = FCoreDelegates::OnGetOnScreenMessages.AddLambda([](FCoreDelegates::FSeverityMessageMap& OutMessages) {
-				// Screen space CAS
 				FFidelityFXCASModule& Module = FFidelityFXCASModule::Get();
-				// ON / OFF
-				FString Message = FString::Printf(TEXT("FidelityFX SS CAS: %s"), Module.GetIsSSCASEnabled() ? TEXT("ON") : TEXT("OFF"));
+#if FX_CAS_CUSTOM_UPSCALE_CALLBACK
+				static const FString SharpenOnly(TEXT(""));
+#else
+				static const FString SharpenOnly(TEXT(" (no upsampling)"));
+#endif // FX_CAS_CUSTOM_UPSCALE_CALLBACK
+				// Screen space CAS ON / OFF
+				FString Message = FString::Printf(TEXT("FidelityFX SS CAS%s: %s"), *SharpenOnly, Module.GetIsSSCASEnabled() ? TEXT("ON") : TEXT("OFF"));
 				if (Module.GetIsSSCASEnabled())
 				{
 					// Resolution
@@ -123,7 +127,6 @@ static void FidelityFXCASCVarSink()
 		GSSCASFP16 = bNewSSCASFP16;
 	}
 
-#if FX_CAS_CUSTOM_UPSCALE_CALLBACK
 	// Screen percentage
 	static const TConsoleVariableData<float>* CVarScreenPercentage = IConsoleManager::Get().FindTConsoleVariableDataFloat(TEXT("r.ScreenPercentage"));
 	if (CVarScreenPercentage)
@@ -136,7 +139,6 @@ static void FidelityFXCASCVarSink()
 			GScreenPercentage = NewScreenPercentage;
 		}
 	}
-#endif // FX_CAS_CUSTOM_UPSCALE_CALLBACK
 }
 FAutoConsoleVariableSink CFidelityFXCASCVarSink(FConsoleCommandDelegate::CreateStatic(&FidelityFXCASCVarSink));
 
