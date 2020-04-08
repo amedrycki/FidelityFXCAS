@@ -179,13 +179,18 @@ To pre-initialize the render target buffers you can use the blueprint method `vo
   - `FIntPoint GetSSCASOutputResolution() const` - return the current output resolution for SS CAS
 
 ## Blueprint library API
-- Screen space CAS methods
+- Screen space CAS controls
   - `bool GetIsSSCASEnabled()` - returns true if screen space CAS is enabled
   - `void SetIsSSCASEnabled(bool bEnabled)` - enables / disables screen space CAS
   - `void ToggleIsSSCASEnabled()` - toggles SS CAS between enabled and disabled
   - `void EnableSSCAS()` - enables SS CAS
   - `void DisableSSCAS()` - disables SS CAS
   - `void InitSSCASCSOutputs(const FIntPoint& Size)` - initializes SS CAS compute shader output buffers
+- Screen space CAS shader parameters
+  - `float GetSSCASSharpness()` - returns the current value of the Sharpness parameter
+  - `void SetSSCASSharpness(float Sharpness)` - sets the Sharpness parameter (the Sharpness value should be in the range [0, 1])
+  - `bool GetUseFP16()` - returns true if SS CAS is using the half-precision version of the shader
+  - `void SetUseFP16(bool UseFP16)` - enables / disables the use of half-presicions shader for SS CAS
 - Render to render target methods
   - `void InitCSOutput(class UTextureRenderTarget2D* InOutputRenderTarget)` - initializes compute shader output buffer for a given render target
   - void DrawToRenderTarget(class UTextureRenderTarget2D* InOutputRenderTarget, class UTexture2D* InInputTexture)` - renders a texture to a render target and aplies CAS and upscaling (if the render target resolution is greater than the texture resolution).
