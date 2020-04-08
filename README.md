@@ -16,7 +16,7 @@ This plugin provides an implementation of Fidelity FX Contrast Adaptive Sharpeni
 Source: [https://gpuopen.com/gaming-product/fidelityfx/](https://gpuopen.com/gaming-product/fidelityfx/)
 
 ## Example screenshots
-(open in full resolution for the differences to be fully visible)
+View in full resolution for the differences to be fully visible.
 
 Screen space CAS OFF | Screen space CAS ON
 ---------------------|--------------------
