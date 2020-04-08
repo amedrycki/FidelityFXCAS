@@ -15,6 +15,17 @@ This plugin provides an implementation of Fidelity FX Contrast Adaptive Sharpeni
 
 Source: [https://gpuopen.com/gaming-product/fidelityfx/](https://gpuopen.com/gaming-product/fidelityfx/)
 
+## Example screenshots
+(open in full resolution for the differences to be fully visible)
+
+Screen space CAS OFF | Screen space CAS ON
+---------------------|--------------------
+![CAS OFF](https://github.com/amedrycki/FidelityFXCAS/blob/master/Docs/Screenshots/CAS_OFF.png?raw=true) | ![CAS_ON](https://github.com/amedrycki/FidelityFXCAS/blob/master/Docs/Screenshots/CAS_ON.png?raw=true)
+
+Upscaling with screen space CAS OFF | Upscaling with screen space CAS ON
+------------------------------------|-----------------------------------
+![CAS OFF (50% upscaling)](https://github.com/amedrycki/FidelityFXCAS/blob/master/Docs/Screenshots/CAS_OFF%20(50%25%20upscaling).png?raw=true) | ![CAS_ON (50% upscaling)](https://github.com/amedrycki/FidelityFXCAS/blob/master/Docs/Screenshots/CAS_ON%20(50%25%20upscaling).png?raw=true)
+
 ## Plugin Functionality
 In short this plugin let's you do 4 things:
 - Draw a texture to a render target using CAS.
