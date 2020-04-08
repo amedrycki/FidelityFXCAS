@@ -30,6 +30,18 @@ class UFidelityFXCASBlueprintLibrary : public UBlueprintFunctionLibrary
 	UFUNCTION(BlueprintCallable, Category = "FidelityFX | CAS")
 	static void DisableSSCAS() { SetIsSSCASEnabled(false); }
 
+	UFUNCTION(BlueprintCallable, Category = "FidelityFX | CAS")
+	static float GetSSCASSharpness();
+
+	UFUNCTION(BlueprintCallable, Category = "FidelityFX | CAS")
+	static void SetSSCASSharpness(float Sharpness);
+
+	UFUNCTION(BlueprintCallable, Category = "FidelityFX | CAS")
+	static bool GetUseFP16();
+
+	UFUNCTION(BlueprintCallable, Category = "FidelityFX | CAS")
+	static void SetUseFP16(bool UseFP16);
+
 	// Allows early initialization of compute shader outputs for screen space CAS (i.e. during loading)
 	// If not called the outputs will be lazy-loaded during the first render
 	UFUNCTION(BlueprintCallable, Category = "FidelityFX | CAS")
@@ -45,5 +57,5 @@ class UFidelityFXCASBlueprintLibrary : public UBlueprintFunctionLibrary
 	static void InitCSOutput(class UTextureRenderTarget2D* InOutputRenderTarget);
 
 	UFUNCTION(BlueprintCallable, Category = "FidelityFX | CAS", meta = (WorldContext = "WorldContextObject"))
-	static void DrawToRenderTarget(/*const UObject* WorldContextObject, */class UTextureRenderTarget2D* InOutputRenderTarget, class UTexture2D* InInputTexture);
+	static void DrawToRenderTarget(class UTextureRenderTarget2D* InOutputRenderTarget, class UTexture2D* InInputTexture, float InSharpness, bool InUseFP16 = false);
 };

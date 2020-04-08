@@ -20,6 +20,9 @@ protected:
 public:
 	TRefCountPtr<IPooledRenderTarget>& CSOutput;
 
+	float Sharpness = 0.5f;
+	bool bUseFP16 = false;
+
 	FFidelityFXCASPassParams(TRefCountPtr<IPooledRenderTarget>& InCSOutput) : CSOutput(InCSOutput) { }
 
 	FORCEINLINE const FIntPoint& GetInputSize() const  { return InputSize; }

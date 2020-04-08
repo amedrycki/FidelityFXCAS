@@ -225,7 +225,7 @@ void FFidelityFXCASModule::SetSSCASSharpness(float Sharpness)
 {
 	if (!FMath::IsNearlyEqual(Sharpness, SSCASSharpness))
 	{
-		SSCASSharpness = Sharpness;
+		SSCASSharpness = FMath::Clamp(Sharpness, 0.0f, 1.0f);
 		CVarFidelityFXCAS_SSCASSharpness->Set(Sharpness);
 	}
 }
@@ -329,6 +329,8 @@ void FFidelityFXCASModule::OnResolvedSceneColor_RenderThread(FRHICommandListImme
 
 	// Prepare pass parameters
 	FFidelityFXCASPassParams_RHI CASPassParams(SceneColorTexture, SceneColorTexture, ComputeShaderOutput_RHI);
+	CASPassParams.Sharpness = FMath::Clamp(SSCASSharpness, 0.0f, 1.0f);
+	CASPassParams.bUseFP16 = bUseFP16;
 
 	// Update resolution info
 	SetSSCASResolutionInfo(CASPassParams.GetInputSize(), CASPassParams.GetOutputSize());
@@ -351,6 +353,8 @@ void FFidelityFXCASModule::OnAddUpscalePass_RenderThread(class FRDGBuilder& Grap
 
 	// Prepare pass parameters
 	FFidelityFXCASPassParams_RDG CASPassParams(SceneColor, RTBinding, ComputeShaderOutput_RDG);
+	CASPassParams.Sharpness = FMath::Clamp(SSCASSharpness, 0.0f, 1.0f);
+	CASPassParams.bUseFP16 = bUseFP16;
 
 	// Update resolution info
 	SetSSCASResolutionInfo(CASPassParams.GetInputSize(), CASPassParams.GetOutputSize());
@@ -379,13 +383,13 @@ void FFidelityFXCASModule::RunComputeShader_RHI_RenderThread(FRHICommandListImme
 	PassParameters.InputTexture = CASPassParams.GetInputTexture();
 	PassParameters.OutputTexture = CASPassParams.GetUAV();
 	CasSetup(reinterpret_cast<AU1*>(&PassParameters.const0), reinterpret_cast<AU1*>(&PassParameters.const1),
-		SSCASSharpness,
+		CASPassParams.Sharpness,
 		static_cast<AF1>(CASPassParams.GetInputSize().X), static_cast<AF1>(CASPassParams.GetInputSize().Y),
 		CASPassParams.GetOutputSize().X, CASPassParams.GetOutputSize().Y);
 
 	// Choose shader version and dispatch
 	bool SharpenOnly = (CASPassParams.GetInputSize() == CASPassParams.GetOutputSize());
-	if (bUseFP16 && SharpenOnly)
+	if (CASPassParams.bUseFP16 && SharpenOnly)
 	{
 		TShaderMapRef<TFidelityFXCASShaderCS_RHI_FP16_SharpenOnly> ComputeShader(GetGlobalShaderMap(GMaxRHIFeatureLevel));
 		FComputeShaderUtils::Dispatch(RHICmdList, *ComputeShader, PassParameters, GetDispatchGroupCount(CASPassParams.GetOutputSize()));
@@ -395,7 +399,7 @@ void FFidelityFXCASModule::RunComputeShader_RHI_RenderThread(FRHICommandListImme
 		TShaderMapRef<TFidelityFXCASShaderCS_RHI_FP32_SharpenOnly> ComputeShader(GetGlobalShaderMap(GMaxRHIFeatureLevel));
 		FComputeShaderUtils::Dispatch(RHICmdList, *ComputeShader, PassParameters, GetDispatchGroupCount(CASPassParams.GetOutputSize()));
 	}
-	else if (bUseFP16)
+	else if (CASPassParams.bUseFP16)
 	{
 		TShaderMapRef<TFidelityFXCASShaderCS_RHI_FP16_Upscale> ComputeShader(GetGlobalShaderMap(GMaxRHIFeatureLevel));
 		FComputeShaderUtils::Dispatch(RHICmdList, *ComputeShader, PassParameters, GetDispatchGroupCount(CASPassParams.GetOutputSize()));
@@ -420,13 +424,13 @@ void FFidelityFXCASModule::RunComputeShader_RDG_RenderThread(FRDGBuilder& GraphB
 	PassParameters->InputTexture = CASPassParams.GetInputTexture();
 	PassParameters->OutputTexture = CASPassParams.GetUAV();
 	CasSetup(reinterpret_cast<AU1*>(&PassParameters->const0), reinterpret_cast<AU1*>(&PassParameters->const1),
-		SSCASSharpness,
+		CASPassParams.Sharpness,
 		static_cast<AF1>(CASPassParams.GetInputSize().X), static_cast<AF1>(CASPassParams.GetInputSize().Y),
 		CASPassParams.GetOutputSize().X, CASPassParams.GetOutputSize().Y);
 
 	// Choose shader version and dispatch
 	bool SharpenOnly = (CASPassParams.GetInputSize() == CASPassParams.GetOutputSize());
-	if (bUseFP16 && SharpenOnly)
+	if (CASPassParams.bUseFP16 && SharpenOnly)
 	{
 		TShaderMapRef<TFidelityFXCASShaderCS_RDG<true, true>> ComputeShader(GetGlobalShaderMap(GMaxRHIFeatureLevel));
 		FComputeShaderUtils::AddPass(GraphBuilder,
@@ -440,7 +444,7 @@ void FFidelityFXCASModule::RunComputeShader_RDG_RenderThread(FRDGBuilder& GraphB
 			RDG_EVENT_NAME("Upscale CS %dx%d -> %dx%d", CASPassParams.GetInputSize().X, CASPassParams.GetInputSize().Y, CASPassParams.GetOutputSize().X, CASPassParams.GetOutputSize().Y),
 			*ComputeShader, PassParameters, GetDispatchGroupCount(CASPassParams.GetOutputSize()));
 	}
-	else if (bUseFP16)
+	else if (CASPassParams.bUseFP16)
 	{
 		TShaderMapRef<TFidelityFXCASShaderCS_RDG<true, false>> ComputeShader(GetGlobalShaderMap(GMaxRHIFeatureLevel));
 		FComputeShaderUtils::AddPass(GraphBuilder,
