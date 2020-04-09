@@ -65,7 +65,7 @@ In the file `Engine/Source/Runtime/RenderCore/Public/RendererInterface.h` in lin
    virtual IAllocatedVirtualTexture* AllocateVirtualTexture(const FAllocatedVTDescription& Desc) = 0;
 ```
 
-In the file `Engine/Source/Runtime/Renderer/Private/RendererModule.h` add the callback accessor definition in line **97** and delegate member variable in line **121**:
+In the file `Engine/Source/Runtime/Renderer/Private/RendererModule.h` add the callback accessor definition in line **97** and delegate member variable in line **115**:
 ```diff
 
    virtual void RenderPostResolvedSceneColorExtension(FRHICommandListImmediate& RHICmdList, class FSceneRenderTargets& SceneContext) override;
