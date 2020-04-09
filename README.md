@@ -55,7 +55,7 @@ In the file `Engine/Source/Runtime/RenderCore/Public/RendererInterface.h` in lin
    virtual void RenderPostResolvedSceneColorExtension(FRHICommandListImmediate& RHICmdList, class FSceneRenderTargets& SceneContext) = 0;
 
 +  // Delegate that is called when substituting upscale pass with a custom one.
-+  DECLARE_DELEGATE_ThreeParams(FOnCustomUpscalePass, class FRDGBuilder& /*GraphBuilder*/, class FRDGTexture* /*SceneColor*/, const FRenderTargetBinding& /*RTBinding*/);
++  DECLARE_DELEGATE_FourParams(FOnCustomUpscalePass, class FRDGBuilder& /*GraphBuilder*/, const FIntRect& /*InInputViewRect*/, class FRDGTexture* /*SceneColor*/, const FRenderTargetBinding& /*RTBinding*/);
 +
 +  // Accessor for custom upscale pass delegate
 +  virtual FOnCustomUpscalePass& GetCustomUpscalePassCallback() = 0;
@@ -111,7 +111,7 @@ In the file `Engine/Source/Runtime/Renderer/Private/PostProcess/PostProcessUpsca
 +  IRendererModule& RendererModule = GetRendererModule();
 +  if (RendererModule.GetCustomUpscalePassCallback().IsBound())
 +  {
-+    RendererModule.GetCustomUpscalePassCallback().Execute(GraphBuilder, Inputs.SceneColor.Texture, Output.GetRenderTargetBinding());
++    RendererModule.GetCustomUpscalePassCallback().Execute(GraphBuilder, View.ViewRect, Inputs.SceneColor.Texture, Output.GetRenderTargetBinding());
 +    return MoveTemp(Output);	// Don't continue with the default upscale
 +  }
 +  // End: Custom upscale pass replacement callback
