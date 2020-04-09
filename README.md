@@ -22,8 +22,8 @@ Screen space CAS OFF | Screen space CAS ON
 ---------------------|--------------------
 ![CAS OFF](https://github.com/amedrycki/FidelityFXCAS/blob/master/Docs/Screenshots/CAS_OFF.png?raw=true) | ![CAS_ON](https://github.com/amedrycki/FidelityFXCAS/blob/master/Docs/Screenshots/CAS_ON.png?raw=true)
 
-Upscaling with screen space CAS OFF | Upscaling with screen space CAS ON
-------------------------------------|-----------------------------------
+Upsampling from 50% resolution (CAS OFF) | Upsampling from 50% resolution (CAS ON)
+-----------------------------------------|----------------------------------------
 ![CAS OFF (50% upscaling)](https://github.com/amedrycki/FidelityFXCAS/blob/master/Docs/Screenshots/CAS_OFF%20(50%25%20upscaling).png?raw=true) | ![CAS_ON (50% upscaling)](https://github.com/amedrycki/FidelityFXCAS/blob/master/Docs/Screenshots/CAS_ON%20(50%25%20upscaling).png?raw=true)
 
 ## Plugin Functionality
@@ -150,7 +150,7 @@ After running your game open the console (by pressing `` ` ``) and use the follw
 ## Screen space CAS with upsampling
 After running your game open the console (by pressing `` ` ``) and change the render resolution to half the size using the console variable `r.ScreenPercentage 50` and enable FX CAS with `r.fxcass.SSCAS 1`.
 
-If you enabled the custom upsampling callback by applying the engine source code modifications described in the section **[Optional] Unreal Engine source code modification to enable screen space CAS with upsampling** above, the rendering pipeline will automatically use the FX CAS upsampling. If you turn off FX CAS with `r.fxcass.SSCAS 0` the render pipeline will switch back to the default upsampling.
+If you enabled the custom upsampling callback by applying the engine source code modifications described in the section **Enabling screen space upsampling (requires Unreal Engine source code modification)** above, the rendering pipeline will automatically use the FX CAS upsampling. If you turn off FX CAS with `r.fxcass.SSCAS 0` the render pipeline will switch back to the default upsampling.
 
 If you did not apply the engine source code modifications the screen space CAS will still work and sharpen the image in a postprocess before the upsampling takes plase. Then the render pipeline will apply the default upsampling algorithms.
 
