@@ -92,7 +92,7 @@ In the file `Engine/Source/Runtime/Renderer/Private/RendererModule.h` add the ca
  extern ICustomCulling* GCustomCullingImpl;
 ```
 
-In the file `Engine/Source/Runtime/Renderer/Private/PostProcess/PostProcessUpscale.cpp` add `EngineModule.h` include in line **5** and call the callback in line **201**:
+In the file `Engine/Source/Runtime/Renderer/Private/PostProcess/PostProcessUpscale.cpp` add `EngineModule.h` include in line **5** and call the callback in line **200**:
 
 ```diff
  #include "PostProcess/PostProcessUpscale.h"
