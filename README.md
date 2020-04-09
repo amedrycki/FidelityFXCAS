@@ -150,7 +150,7 @@ After running your game open the console (by pressing `` ` ``) and use the follw
 ## Screen space CAS with upsampling
 After running your game open the console (by pressing `` ` ``) and change the render resolution to half the size using the console variable `r.ScreenPercentage 50` and enable FX CAS with `r.fxcass.SSCAS 1`.
 
-If you enabled the custom upsampling callback by applying the engine source code modifications described in the section **[Optional] Unreal Engine source code modification to enable screen space CAS with upsampling** above, the rendering pipeline will automatically use the FX CAS upsampling. If you turn off FX CAS with `r.fxcass.SSCAS 0` the render pipeline will switch back to the default upsampling.
+If you enabled the custom upsampling callback by applying the engine source code modifications described in the section **Enabling screen space upsampling (requires Unreal Engine source code modification)** above, the rendering pipeline will automatically use the FX CAS upsampling. If you turn off FX CAS with `r.fxcass.SSCAS 0` the render pipeline will switch back to the default upsampling.
 
 If you did not apply the engine source code modifications the screen space CAS will still work and sharpen the image in a postprocess before the upsampling takes plase. Then the render pipeline will apply the default upsampling algorithms.
 
