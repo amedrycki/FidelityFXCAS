@@ -22,8 +22,8 @@ Screen space CAS OFF | Screen space CAS ON
 ---------------------|--------------------
 ![CAS OFF](https://github.com/amedrycki/FidelityFXCAS/blob/master/Docs/Screenshots/CAS_OFF.png?raw=true) | ![CAS_ON](https://github.com/amedrycki/FidelityFXCAS/blob/master/Docs/Screenshots/CAS_ON.png?raw=true)
 
-Upscaling from 50% resolution (CAS OFF) | Upscaling from 50% resolution (CAS ON)
-----------------------------------------|---------------------------------------
+Upsampling from 50% resolution (CAS OFF) | Upsampling from 50% resolution (CAS ON)
+-----------------------------------------|----------------------------------------
 ![CAS OFF (50% upscaling)](https://github.com/amedrycki/FidelityFXCAS/blob/master/Docs/Screenshots/CAS_OFF%20(50%25%20upscaling).png?raw=true) | ![CAS_ON (50% upscaling)](https://github.com/amedrycki/FidelityFXCAS/blob/master/Docs/Screenshots/CAS_ON%20(50%25%20upscaling).png?raw=true)
 
 ## Plugin Functionality
