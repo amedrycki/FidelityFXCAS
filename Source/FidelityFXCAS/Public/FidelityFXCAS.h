@@ -64,7 +64,7 @@ protected:
 
 #if FX_CAS_CUSTOM_UPSCALE_CALLBACK
 	// SSCAS (with upscale) using custom Renderer callback (RDG)
-	void OnAddUpscalePass_RenderThread(class FRDGBuilder& GraphBuilder, class FRDGTexture* SceneColor, const FRenderTargetBinding& RTBinding);
+	void OnAddUpscalePass_RenderThread(class FRDGBuilder& GraphBuilder, const FIntRect& InInputViewRect, class FRDGTexture* SceneColor, const FRenderTargetBinding& RTBinding);
 #endif // FX_CAS_CUSTOM_UPSCALE_CALLBACK
 
 	// Compute shader call

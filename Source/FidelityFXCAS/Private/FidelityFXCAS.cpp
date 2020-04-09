@@ -344,7 +344,7 @@ void FFidelityFXCASModule::OnResolvedSceneColor_RenderThread(FRHICommandListImme
 }
 
 #if FX_CAS_CUSTOM_UPSCALE_CALLBACK
-void FFidelityFXCASModule::OnAddUpscalePass_RenderThread(class FRDGBuilder& GraphBuilder, class FRDGTexture* SceneColor, const FRenderTargetBinding& RTBinding)
+void FFidelityFXCASModule::OnAddUpscalePass_RenderThread(class FRDGBuilder& GraphBuilder, const FIntRect& InInputViewRect, class FRDGTexture* SceneColor, const FRenderTargetBinding& RTBinding)
 {
 	check(IsInRenderingThread());
 
@@ -352,7 +352,7 @@ void FFidelityFXCASModule::OnAddUpscalePass_RenderThread(class FRDGBuilder& Grap
 	SCOPED_DRAW_EVENT(GraphBuilder.RHICmdList, FidelityFXCASModule_OnAddUpscalePass); // Used to profile GPU activity and add metadata to be consumed by for example RenderDoc
 
 	// Prepare pass parameters
-	FFidelityFXCASPassParams_RDG CASPassParams(SceneColor, RTBinding, ComputeShaderOutput_RDG);
+	FFidelityFXCASPassParams_RDG CASPassParams(InInputViewRect, SceneColor, RTBinding, ComputeShaderOutput_RDG);
 	CASPassParams.Sharpness = FMath::Clamp(SSCASSharpness, 0.0f, 1.0f);
 	CASPassParams.bUseFP16 = bUseFP16;
 

@@ -77,12 +77,13 @@ protected:
 	FRenderTargetBinding RTBinding;
 
 public:
-	FFidelityFXCASPassParams_RDG(const FRDGTextureRef& InInputTexture, const FRenderTargetBinding& InRTBinding, TRefCountPtr<IPooledRenderTarget>& InCSOutput)
+	FFidelityFXCASPassParams_RDG(const FIntRect& InInputViewRect, const FRDGTextureRef& InInputTexture, const FRenderTargetBinding& InRTBinding, TRefCountPtr<IPooledRenderTarget>& InCSOutput)
 		: FFidelityFXCASPassParams(InCSOutput)
 		, InputTexture(InInputTexture)
 		, RTBinding(InRTBinding)
 	{
-		InputSize = InputTexture != nullptr ? InputTexture->Desc.Extent : FIntPoint::ZeroValue;
+		//InputSize = InputTexture != nullptr ? InputTexture->Desc.Extent : FIntPoint::ZeroValue;
+		InputSize = InInputViewRect.Size();
 		OutputSize = RTBinding.GetTexture() != nullptr ? RTBinding.GetTexture()->Desc.Extent : FIntPoint::ZeroValue;
 	}
 
