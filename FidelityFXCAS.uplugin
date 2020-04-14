@@ -18,7 +18,7 @@
 	"Modules": [
 		{
 			"Name": "FidelityFXCAS",
-			"Type": "DeveloperTool",
+			"Type": "Runtime",
 			"LoadingPhase": "PostConfigInit"
 		}
 	],
