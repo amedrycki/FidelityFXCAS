@@ -7,7 +7,6 @@
 #include "FidelityFXCASShaderVS.h"
 #include "FidelityFXCASIncludes.h"
 
-#include "Engine.h"
 #include "CommonRenderResources.h"
 #include "GlobalShader.h"
 #include "Interfaces/IPluginManager.h"
