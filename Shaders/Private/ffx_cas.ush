@@ -58,9 +58,9 @@
 // // Setup pre-portability-header defines.
 // #define A_CPU 1
 // // Include the portability header (requires version 1.20190530 or later which is backwards compatible).
-// #include "ffx_a.h"
+// #include "ffx_a.ush"
 // // Include the CAS header.
-// #include "ffx_cas.h"
+// #include "ffx_cas.ush"
 // ...
 // // Call the setup function to build out the constants for the shader, pass these to the shader.
 // // The 'varAU4(const0);' expands into 'uint32_t const0[4];' on the CPU.
@@ -87,7 +87,7 @@
 // #define A_HALF 1
 // ...
 // // Include the portability header (or copy it in without an include).
-// #include "ffx_a.h"
+// #include "ffx_a.ush"
 // ...
 // // Define the fetch function(s).
 // // CasLoad() takes a 32-bit unsigned integer 2D coordinate and loads color.
@@ -103,7 +103,7 @@
 // void CasInputH(inout AH2 r,inout AH2 g,inout AH2 b){}
 // ...
 // // Include this CAS header file (or copy it in without an include).
-// #include "ffx_cas.h"
+// #include "ffx_cas.ush"
 // ...
 // // Example in shader integration for loop-unrolled 16x16 case for 32-bit.
 // layout(local_size_x=64)in;
@@ -340,7 +340,7 @@
 // ==========
 // 20190610 - Misc documentation cleanup.
 // 20190609 - Removed lowQuality bool, improved scaling logic.
-// 20190530 - Unified CPU/GPU setup code, using new ffx_a.h, faster, define CAS_BETTER_DIAGONALS to get older slower one.
+// 20190530 - Unified CPU/GPU setup code, using new ffx_a.ush, faster, define CAS_BETTER_DIAGONALS to get older slower one.
 // 20190529 - Missing a good way to re-interpret packed in HLSL, so disabling approximation optimizations for now.
 // 20190528 - Fixed so GPU CasSetup() generates half data all the time.
 // 20190527 - Implemented approximations for rcp() and sqrt().

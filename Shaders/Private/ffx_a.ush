@@ -41,7 +41,7 @@
 // =======
 // A_WAVE .... Support wave-wide operations.
 //------------------------------------------------------------------------------------------------------------------------------
-// To get #include "ffx_a.h" working in GLSL use '#extension GL_GOOGLE_include_directive:require'.
+// To get #include "ffx_a.ush" working in GLSL use '#extension GL_GOOGLE_include_directive:require'.
 //------------------------------------------------------------------------------------------------------------------------------
 // SIMPLIFIED TYPE SYSTEM
 // ======================
