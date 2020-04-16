@@ -1,5 +1,9 @@
 #pragma once
 
+#if FX_CAS_PLUGIN_ENABLED
+
+#include "FidelityFXCASShaderCompilationRules.h"
+
 #include "CommonRenderResources.h"
 #include "GlobalShader.h"
 #include "ShaderParameterStruct.h"
@@ -43,10 +47,15 @@ class FFidelityFXCASShaderVS : public FGlobalShader
 public:
 	DECLARE_GLOBAL_SHADER(FFidelityFXCASShaderVS);
 
-	static bool ShouldCompilePermutation(const FGlobalShaderPermutationParameters& Parameters) { return true; }
+	static bool ShouldCompilePermutation(const FGlobalShaderPermutationParameters& Parameters)
+	{
+		return FFidelityFXCASShaderCompilationRules::ShouldCompilePermutation(Parameters);
+	}
 
 	FFidelityFXCASShaderVS() = default;
 	FFidelityFXCASShaderVS(const ShaderMetaType::CompiledShaderInitializerType& Initializer) : FGlobalShader(Initializer) { }
 };
 
 IMPLEMENT_GLOBAL_SHADER(FFidelityFXCASShaderVS, "/Plugin/FidelityFXCAS/Private/CAS_ShaderVS.usf", "mainVS", SF_Vertex);
+
+#endif // FX_CAS_PLUGIN_ENABLED

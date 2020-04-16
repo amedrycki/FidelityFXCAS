@@ -1,4 +1,8 @@
+
+#if FX_CAS_PLUGIN_ENABLED
+
 #include "FidelityFXCASShaderCS.h"
+#include "FidelityFXCASShaderCompilationRules.h"
 
 //-------------------------------------------------------------------------------------------------
 // RHI Version
@@ -13,7 +17,7 @@ IMPLEMENT_SHADER_TYPE(template<> FIDELITYFXCAS_API, TFidelityFXCASShaderCS_RHI_F
 
 bool FFidelityFXCASShaderCS_RHI::ShouldCompilePermutation(const FGlobalShaderPermutationParameters& Parameters)
 {
-	return IsFeatureLevelSupported(Parameters.Platform, ERHIFeatureLevel::SM5);
+	return FFidelityFXCASShaderCompilationRules::ShouldCompilePermutation(Parameters);
 }
 
 void FFidelityFXCASShaderCS_RHI::ModifyCompilationEnvironment(const FGlobalShaderPermutationParameters& Parameters, FShaderCompilerEnvironment& OutEnvironment)
@@ -52,7 +56,7 @@ IMPLEMENT_SHADER_TYPE(template<> FIDELITYFXCAS_API, TFidelityFXCASShaderCS_RDG_F
 
 bool FFidelityFXCASShaderCS_RDG::ShouldCompilePermutation(const FGlobalShaderPermutationParameters& Parameters)
 {
-	return IsFeatureLevelSupported(Parameters.Platform, ERHIFeatureLevel::SM5);
+	return FFidelityFXCASShaderCompilationRules::ShouldCompilePermutation(Parameters);
 }
 
 void FFidelityFXCASShaderCS_RDG::ModifyCompilationEnvironment(const FGlobalShaderPermutationParameters& Parameters, FShaderCompilerEnvironment& OutEnvironment)
@@ -78,3 +82,4 @@ void TFidelityFXCASShaderCS_RDG<FP16, SHARPEN_ONLY>::ModifyCompilationEnvironmen
 }
 
 #endif // FX_CAS_CUSTOM_UPSCALE_CALLBACK
+#endif // FX_CAS_PLUGIN_ENABLED

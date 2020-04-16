@@ -10,12 +10,13 @@
 //-------------------------------------------------------------------------------------------------
 // Local compute shader output pool
 //-------------------------------------------------------------------------------------------------
-
+#if FX_CAS_PLUGIN_ENABLED
 TMap<UTextureRenderTarget2D*, TRefCountPtr<IPooledRenderTarget>> GFXCASCSOutputs;
 FORCEINLINE static TRefCountPtr<IPooledRenderTarget>& GFXCASGetCSOutput(UTextureRenderTarget2D* InOutputRenderTarget)
 {
 	return GFXCASCSOutputs.FindOrAdd(InOutputRenderTarget);
 }
+#endif // FX_CAS_PLUGIN_ENABLED
 
 //-------------------------------------------------------------------------------------------------
 // UFidelityFXCASBlueprintLibrary class
@@ -63,6 +64,7 @@ void UFidelityFXCASBlueprintLibrary::InitSSCASCSOutputs(const FIntPoint& Size)
 
 void UFidelityFXCASBlueprintLibrary::InitCSOutput(class UTextureRenderTarget2D* InOutputRenderTarget)
 {
+#if FX_CAS_PLUGIN_ENABLED
 	// Check output
 	if (!InOutputRenderTarget)
 	{
@@ -80,10 +82,12 @@ void UFidelityFXCASBlueprintLibrary::InitCSOutput(class UTextureRenderTarget2D* 
 			FFidelityFXCASModule::Get().PrepareComputeShaderOutput_RenderThread(GRHICommandList.GetImmediateCommandList(), Size, GFXCASGetCSOutput(InOutputRenderTarget));
 		}
 	);
+#endif // FX_CAS_PLUGIN_ENABLED
 }
 
 void UFidelityFXCASBlueprintLibrary::DrawToRenderTarget(class UTextureRenderTarget2D* InOutputRenderTarget, class UTexture2D* InInputTexture, float InSharpness, bool InUseFP16)
 {
+#if FX_CAS_PLUGIN_ENABLED
 	// Check input texture
 	if (!InInputTexture)
 	{
@@ -131,4 +135,5 @@ void UFidelityFXCASBlueprintLibrary::DrawToRenderTarget(class UTextureRenderTarg
 			FFidelityFXCASModule::Get().DrawToRenderTarget_RHI_RenderThread(RHICmdList, CASPassParams);
 		}
 	);
+#endif // FX_CAS_PLUGIN_ENABLED
 }

@@ -13,6 +13,7 @@ public:
 	// Static accessors
 	static FORCEINLINE bool IsAvailable() { return FModuleManager::Get().IsModuleLoaded("FidelityFXCAS"); }
 	static FFidelityFXCASModule& Get();
+	static bool IsEnabledOnCurrentPlatform();
 
 	// IModuleInterface implementation
 	virtual void StartupModule() override;
@@ -27,6 +28,17 @@ public:
 protected:
 	bool bIsSSCASEnabled;
 
+	// Screen space shader params
+public:
+	float GetSSCASSharpness() const { return SSCASSharpness; }
+	void SetSSCASSharpness(float Sharpness);
+	bool GetUseFP16() const { return bUseFP16; }
+	void SetUseFP16(bool UseFP16);
+protected:
+	float SSCASSharpness = 0.5f;
+	bool bUseFP16 = false;
+
+#if FX_CAS_PLUGIN_ENABLED
 	// SSCAS callbacks management
 	void BindResolvedSceneColorCallback(IRendererModule* RendererModule);   // No upscale
 	void UnbindResolvedSceneColorCallback(IRendererModule* RendererModule);
@@ -35,16 +47,6 @@ protected:
 	void UnbindCustomUpscaleCallback(IRendererModule* RendererModule);
 #endif // FX_CAS_CUSTOM_UPSCALE_CALLBACK
 
-	// Screen space shader params
-public:
-	float GetSSCASSharpness() const { return SSCASSharpness; }
-	void SetSSCASSharpness(float Sharpness);
-	bool GetUseFP16() const { return bUseFP16; }
-	void SetUseFP16(bool UseFP16);
-protected:
-	float SSCASSharpness = 0.0f;
-	bool bUseFP16 = false;
-
 	// Compute shader output
 	TRefCountPtr<IPooledRenderTarget> ComputeShaderOutput_RHI;
 #if FX_CAS_CUSTOM_UPSCALE_CALLBACK
@@ -52,12 +54,14 @@ protected:
 #endif // FX_CAS_CUSTOM_UPSCALE_CALLBACK
 	void PrepareComputeShaderOutput_RenderThread(FRHICommandListImmediate& RHICmdList, const FIntPoint& OutputSize,
 		TRefCountPtr<IPooledRenderTarget>& CSOutput, const TCHAR* InDebugName = nullptr);
+#endif // FX_CAS_PLUGIN_ENABLED
 public:
 	// Allows early initialization of compute shader outputs (i.e. during loading)
 	// If not called the outputs will be lazy-loaded during the first render
 	void InitSSCASCSOutputs(const FIntPoint& Size);
 
 protected:
+#if FX_CAS_PLUGIN_ENABLED
 	// SSCAS (no upscale) using Renderer's ResolvedSceneColor callback (RHI)
 	FDelegateHandle OnResolvedSceneColorHandle;	// Post process render pipeline hook and handle
 	void OnResolvedSceneColor_RenderThread(FRHICommandListImmediate& RHICmdList, class FSceneRenderTargets& SceneContext);
@@ -79,6 +83,7 @@ protected:
 #if FX_CAS_CUSTOM_UPSCALE_CALLBACK
 	void DrawToRenderTarget_RDG_RenderThread(FRDGBuilder& GraphBuilder, const class FFidelityFXCASPassParams_RDG& CASPassParams);
 #endif // FX_CAS_CUSTOM_UPSCALE_CALLBACK
+#endif // FX_CAS_PLUGIN_ENABLED
 
 	// Resolution info
 	mutable FCriticalSection ResolutionInfoCS;
@@ -89,5 +94,7 @@ public:
 	FORCEINLINE FIntPoint GetSSCASInputResolution() const  { FScopeLock Lock(&ResolutionInfoCS); return InputResolution; }
 	FORCEINLINE FIntPoint GetSSCASOutputResolution() const { FScopeLock Lock(&ResolutionInfoCS); return OutputResolution; }
 protected:
+#if FX_CAS_PLUGIN_ENABLED
 	void SetSSCASResolutionInfo(const FIntPoint& InInputResolution, const FIntPoint& InOutputResolution);
+#endif // FX_CAS_PLUGIN_ENABLED
 };

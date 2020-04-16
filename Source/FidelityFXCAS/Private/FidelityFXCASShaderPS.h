@@ -1,5 +1,9 @@
 #pragma once
 
+#if FX_CAS_PLUGIN_ENABLED
+
+#include "FidelityFXCASShaderCompilationRules.h"
+
 #include "CoreMinimal.h"
 #include "GlobalShader.h"
 #include "ShaderParameterStruct.h"
@@ -22,7 +26,7 @@ public:
 public:
 	static bool ShouldCompilePermutation(const FGlobalShaderPermutationParameters& Parameters)
 	{
-		return IsFeatureLevelSupported(Parameters.Platform, ERHIFeatureLevel::SM5);
+		return FFidelityFXCASShaderCompilationRules::ShouldCompilePermutation(Parameters);
 	}
 };
 
@@ -48,10 +52,11 @@ public:
 public:
 	static bool ShouldCompilePermutation(const FGlobalShaderPermutationParameters& Parameters)
 	{
-		return IsFeatureLevelSupported(Parameters.Platform, ERHIFeatureLevel::SM5);
+		return FFidelityFXCASShaderCompilationRules::ShouldCompilePermutation(Parameters);
 	}
 };
 
 IMPLEMENT_GLOBAL_SHADER(FFidelityFXCASShaderPS_RDG, "/Plugin/FidelityFXCAS/Private/CAS_ShaderPS.usf", "mainPS", SF_Pixel);
 
 #endif // FX_CAS_CUSTOM_UPSCALE_CALLBACK
+#endif // FX_CAS_PLUGIN_ENABLED

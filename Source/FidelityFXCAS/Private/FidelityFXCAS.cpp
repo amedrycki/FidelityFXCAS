@@ -23,6 +23,7 @@
 //-------------------------------------------------------------------------------------------------
 // Console variables
 //-------------------------------------------------------------------------------------------------
+#if FX_CAS_PLUGIN_ENABLED
 static TAutoConsoleVariable<int32> CVarFidelityFXCAS_DisplayInfo(
 	TEXT("r.fxcas.DisplayInfo"),
 	0,
@@ -140,6 +141,7 @@ static void FidelityFXCASCVarSink()
 	}
 }
 FAutoConsoleVariableSink CFidelityFXCASCVarSink(FConsoleCommandDelegate::CreateStatic(&FidelityFXCASCVarSink));
+#endif // FX_CAS_PLUGIN_ENABLED
 
 //-------------------------------------------------------------------------------------------------
 // FFidelityFXCASModule class implementation
@@ -153,6 +155,15 @@ FFidelityFXCASModule& FFidelityFXCASModule::Get()
 	return *CachedModule;
 }
 
+bool FFidelityFXCASModule::IsEnabledOnCurrentPlatform()
+{
+#if FX_CAS_PLUGIN_ENABLED
+	return true;
+#else // FX_CAS_PLUGIN_ENABLED
+	return false;
+#endif // FX_CAS_PLUGIN_ENABLED
+}
+
 void FFidelityFXCASModule::StartupModule()
 {
 	// This code will execute after your module is loaded into memory; the exact timing is specified in the .uplugin file per-module
@@ -164,7 +175,9 @@ void FFidelityFXCASModule::StartupModule()
 	// Reset variables
 	bIsSSCASEnabled = false;
 	SSCASSharpness = 0.5f;
+#if FX_CAS_PLUGIN_ENABLED
 	OnResolvedSceneColorHandle.Reset();
+#endif // FX_CAS_PLUGIN_ENABLED
 }
 
 void FFidelityFXCASModule::ShutdownModule()
@@ -177,16 +190,19 @@ void FFidelityFXCASModule::ShutdownModule()
 
 void FFidelityFXCASModule::SetIsSSCASEnabled(bool Enabled)
 {
+#if FX_CAS_PLUGIN_ENABLED
 	if (Enabled != GetIsSSCASEnabled())
 	{
 		bIsSSCASEnabled = Enabled;
 		UpdateSSCASEnabled();
 		CVarFidelityFXCAS_SSCAS->Set(Enabled);
 	}
+#endif // FX_CAS_PLUGIN_ENABLED
 }
 
 void FFidelityFXCASModule::UpdateSSCASEnabled()
 {
+#if FX_CAS_PLUGIN_ENABLED
 	const FName RendererModuleName("Renderer");
 	IRendererModule* RendererModule = FModuleManager::GetModulePtr<IRendererModule>(RendererModuleName);
 
@@ -218,26 +234,32 @@ void FFidelityFXCASModule::UpdateSSCASEnabled()
 		UnbindCustomUpscaleCallback(RendererModule);
 #endif // FX_CAS_CUSTOM_UPSCALE_CALLBACK
 	}
+#endif // FX_CAS_PLUGIN_ENABLED
 }
 
 void FFidelityFXCASModule::SetSSCASSharpness(float Sharpness)
 {
+#if FX_CAS_PLUGIN_ENABLED
 	if (!FMath::IsNearlyEqual(Sharpness, SSCASSharpness))
 	{
 		SSCASSharpness = FMath::Clamp(Sharpness, 0.0f, 1.0f);
 		CVarFidelityFXCAS_SSCASSharpness->Set(Sharpness);
 	}
+#endif // FX_CAS_PLUGIN_ENABLED
 }
 
 void FFidelityFXCASModule::SetUseFP16(bool UseFP16)
 {
+#if FX_CAS_PLUGIN_ENABLED
 	if (UseFP16 != bUseFP16)
 	{
 		bUseFP16 = UseFP16;
 		CVarFidelityFXCAS_SSCASFP16->Set(UseFP16);
 	}
+#endif // FX_CAS_PLUGIN_ENABLED
 }
 
+#if FX_CAS_PLUGIN_ENABLED
 void FFidelityFXCASModule::BindResolvedSceneColorCallback(IRendererModule* RendererModule)
 {
 	if (!OnResolvedSceneColorHandle.IsValid())
@@ -295,9 +317,11 @@ void FFidelityFXCASModule::PrepareComputeShaderOutput_RenderThread(FRHICommandLi
 		GRenderTargetPool.FindFreeElement(RHICmdList, CSOutputDesc, CSOutput, DebugName);
 	}
 }
+#endif // FX_CAS_PLUGIN_ENABLED
 
 void FFidelityFXCASModule::InitSSCASCSOutputs(const FIntPoint& Size)
 {
+#if FX_CAS_PLUGIN_ENABLED
 	ENQUEUE_RENDER_COMMAND(FidelityFXCAS_InitSSCASCSOutputs)(
 		[this, Size](FRHICommandListImmediate& RHICmdList)
 		{
@@ -310,8 +334,10 @@ void FFidelityFXCASModule::InitSSCASCSOutputs(const FIntPoint& Size)
 #endif // FX_CAS_CUSTOM_UPSCALE_CALLBACK
 		}
 	);
+#endif // FX_CAS_PLUGIN_ENABLED
 }
 
+#if FX_CAS_PLUGIN_ENABLED
 void FFidelityFXCASModule::OnResolvedSceneColor_RenderThread(FRHICommandListImmediate& RHICmdList, class FSceneRenderTargets& SceneContext)
 {
 	check(IsInRenderingThread());
@@ -557,6 +583,7 @@ void FFidelityFXCASModule::DrawToRenderTarget_RDG_RenderThread(FRDGBuilder& Grap
 	});
 }
 #endif // FX_CAS_CUSTOM_UPSCALE_CALLBACK
+#endif // FX_CAS_PLUGIN_ENABLED
 
 void FFidelityFXCASModule::GetSSCASResolutionInfo(FIntPoint& OutInputResolution, FIntPoint& OutOutputResolution) const
 {
@@ -565,12 +592,14 @@ void FFidelityFXCASModule::GetSSCASResolutionInfo(FIntPoint& OutInputResolution,
 	OutOutputResolution = OutputResolution;
 }
 
+#if FX_CAS_PLUGIN_ENABLED
 void FFidelityFXCASModule::SetSSCASResolutionInfo(const FIntPoint& InInputResolution, const FIntPoint& InOutputResolution)
 {
 	FScopeLock Lock(&ResolutionInfoCS);
 	InputResolution = InInputResolution;
 	OutputResolution = InOutputResolution;
 }
+#endif // FX_CAS_PLUGIN_ENABLED
 
 #undef LOCTEXT_NAMESPACE
 	

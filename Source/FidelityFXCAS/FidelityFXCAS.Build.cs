@@ -61,10 +61,19 @@ public class FidelityFXCAS : ModuleRules
 				// ... add any modules that your module loads dynamically here ...
 			});
 
-        // Change the following to 1 to enable upscaling, after you've modified the UE sources by adding upscale callback
-        PublicDefinitions.Add("FX_CAS_CUSTOM_UPSCALE_CALLBACK=0");
-
 		// So far FX CAS only works on Windows
-		// TODO: Add macro to enable / disable the whole thing
-    }
+		if (Target.Platform == UnrealTargetPlatform.Win64)
+		{
+			PublicDefinitions.Add("FX_CAS_PLUGIN_ENABLED=1");
+		}
+		else
+		{
+			// The plugin will still compile, but with dummy method stubs to prevent possible compilation errors
+			// in other places in the code or in blueprints
+			PublicDefinitions.Add("FX_CAS_PLUGIN_ENABLED=0");
+		}
+
+		// Change the following to 1 to enable upscaling, after you've modified the UE sources by adding upscale callback
+		PublicDefinitions.Add("FX_CAS_CUSTOM_UPSCALE_CALLBACK=1");
+	}
 }

@@ -1,5 +1,7 @@
 #pragma once
 
+#if FX_CAS_PLUGIN_ENABLED
+
 #include "CoreMinimal.h"
 #include "GlobalShader.h"
 #include "ShaderParameterStruct.h"
@@ -82,3 +84,4 @@ typedef TFidelityFXCASShaderCS_RDG<1, 0> TFidelityFXCASShaderCS_RDG_FP16_Upscale
 typedef TFidelityFXCASShaderCS_RDG<1, 1> TFidelityFXCASShaderCS_RDG_FP16_SharpenOnly;
 
 #endif // FX_CAS_CUSTOM_UPSCALE_CALLBACK
+#endif // FX_CAS_PLUGIN_ENABLED

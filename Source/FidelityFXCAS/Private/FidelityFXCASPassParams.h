@@ -1,5 +1,7 @@
 #pragma once
 
+#if FX_CAS_PLUGIN_ENABLED
+
 #include "RHIResources.h"
 #include "RendererInterface.h"
 
@@ -92,3 +94,4 @@ public:
 };
 
 #endif // FX_CAS_CUSTOM_UPSCALE_CALLBACK
+#endif // FX_CAS_PLUGIN_ENABLED
