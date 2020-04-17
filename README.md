@@ -172,6 +172,7 @@ To pre-initialize the render target buffers you can use the blueprint method `vo
 - Module access methods
   - `static bool IsAvailable()` - returns true if the module is loaded
   - `static FFidelityFXCASModule& Get()` - returns the loaded module reference
+  - `static bool IsEnabledOnCurrentPlatform()` - return true if the module is enabled for the current platform
 - Screen space CAS controls
   - `bool GetIsSSCASEnabled() const` - returns true if SS CAS is enabled
   - `void SetIsSSCASEnabled(bool Enabled)` - enables / disables SS CAS
@@ -190,6 +191,8 @@ To pre-initialize the render target buffers you can use the blueprint method `vo
   - `FIntPoint GetSSCASOutputResolution() const` - return the current output resolution for SS CAS
 
 ## Blueprint library API
+- General purpose plugin methods
+  - `bool IsPluginEnabledOnCurrentPlatform()` - return true if the module is enabled for the current platform
 - Screen space CAS controls
   - `bool GetIsSSCASEnabled()` - returns true if screen space CAS is enabled
   - `void SetIsSSCASEnabled(bool bEnabled)` - enables / disables screen space CAS
