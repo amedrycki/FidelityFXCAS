@@ -7,10 +7,12 @@
 class FFidelityFXCASShaderCompilationRules
 {
 public:
+	// Global method for all shaders
 	static bool ShouldCompilePermutation(const FGlobalShaderPermutationParameters& Parameters)
 	{
 		// Platform check
-		if (Parameters.Platform != EShaderPlatform::SP_PCD3D_SM5)
+		if (Parameters.Platform != EShaderPlatform::SP_PCD3D_SM5         // PC Windows
+			&& Parameters.Platform != EShaderPlatform::SP_XBOXONE_D3D12) // XboxOne
 			return false;
 
 		// Feature check
@@ -19,6 +21,18 @@ public:
 
 		// All checks passed
 		return true;
+	}
+
+	// Separate rules for compute shaders
+	template <bool FP16>
+	static bool ShouldCompilePermutationCS(const FGlobalShaderPermutationParameters& Parameters)
+	{
+		// FP16 doesn't cook on XboxOne
+		if (FP16 && Parameters.Platform == EShaderPlatform::SP_XBOXONE_D3D12)
+			return false;
+
+		// Default rules
+		return ShouldCompilePermutation(Parameters);
 	}
 };
 

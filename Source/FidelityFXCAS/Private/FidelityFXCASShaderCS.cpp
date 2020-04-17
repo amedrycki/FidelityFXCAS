@@ -8,12 +8,15 @@
 // RHI Version
 //-------------------------------------------------------------------------------------------------
 
-IMPLEMENT_SHADER_TYPE(FIDELITYFXCAS_API, FFidelityFXCASShaderCS_RHI, TEXT("/Plugin/FidelityFXCAS/Private/CAS_ShaderCS.usf"), TEXT("mainCS"), SF_Compute);
+// Do not implement the base shader as it's missing the necessary defines anyway
+//IMPLEMENT_SHADER_TYPE(FIDELITYFXCAS_API, FFidelityFXCASShaderCS_RHI, TEXT("/Plugin/FidelityFXCAS/Private/CAS_ShaderCS.usf"), TEXT("mainCS"), SF_Compute);
 
 IMPLEMENT_SHADER_TYPE(template<> FIDELITYFXCAS_API, TFidelityFXCASShaderCS_RHI_FP32_Upscale,     TEXT("/Plugin/FidelityFXCAS/Private/CAS_ShaderCS.usf"), TEXT("mainCS"), SF_Compute);
 IMPLEMENT_SHADER_TYPE(template<> FIDELITYFXCAS_API, TFidelityFXCASShaderCS_RHI_FP32_SharpenOnly, TEXT("/Plugin/FidelityFXCAS/Private/CAS_ShaderCS.usf"), TEXT("mainCS"), SF_Compute);
+#if FX_CAS_FP16_ENABLED
 IMPLEMENT_SHADER_TYPE(template<> FIDELITYFXCAS_API, TFidelityFXCASShaderCS_RHI_FP16_Upscale,     TEXT("/Plugin/FidelityFXCAS/Private/CAS_ShaderCS.usf"), TEXT("mainCS"), SF_Compute);
 IMPLEMENT_SHADER_TYPE(template<> FIDELITYFXCAS_API, TFidelityFXCASShaderCS_RHI_FP16_SharpenOnly, TEXT("/Plugin/FidelityFXCAS/Private/CAS_ShaderCS.usf"), TEXT("mainCS"), SF_Compute);
+#endif // FX_CAS_FP16_ENABLED
 
 bool FFidelityFXCASShaderCS_RHI::ShouldCompilePermutation(const FGlobalShaderPermutationParameters& Parameters)
 {
@@ -31,7 +34,7 @@ void FFidelityFXCASShaderCS_RHI::ModifyCompilationEnvironment(const FGlobalShade
 template<bool FP16, bool SHARPEN_ONLY>
 bool TFidelityFXCASShaderCS_RHI<FP16, SHARPEN_ONLY>::ShouldCompilePermutation(const FGlobalShaderPermutationParameters& Parameters)
 {
-	return FFidelityFXCASShaderCS_RHI::ShouldCompilePermutation(Parameters);
+	return FFidelityFXCASShaderCompilationRules::ShouldCompilePermutationCS<FP16>(Parameters);
 }
 
 template<bool FP16, bool SHARPEN_ONLY>
@@ -47,12 +50,15 @@ void TFidelityFXCASShaderCS_RHI<FP16, SHARPEN_ONLY>::ModifyCompilationEnvironmen
 // RDG Version
 //-------------------------------------------------------------------------------------------------
 
-IMPLEMENT_SHADER_TYPE(FIDELITYFXCAS_API, FFidelityFXCASShaderCS_RDG, TEXT("/Plugin/FidelityFXCAS/Private/CAS_ShaderCS.usf"), TEXT("mainCS"), SF_Compute);
+// Do not implement the base shader as it's missing the necessary defines anyway
+//IMPLEMENT_SHADER_TYPE(FIDELITYFXCAS_API, FFidelityFXCASShaderCS_RDG, TEXT("/Plugin/FidelityFXCAS/Private/CAS_ShaderCS.usf"), TEXT("mainCS"), SF_Compute);
 
 IMPLEMENT_SHADER_TYPE(template<> FIDELITYFXCAS_API, TFidelityFXCASShaderCS_RDG_FP32_Upscale,     TEXT("/Plugin/FidelityFXCAS/Private/CAS_ShaderCS.usf"), TEXT("mainCS"), SF_Compute);
 IMPLEMENT_SHADER_TYPE(template<> FIDELITYFXCAS_API, TFidelityFXCASShaderCS_RDG_FP32_SharpenOnly, TEXT("/Plugin/FidelityFXCAS/Private/CAS_ShaderCS.usf"), TEXT("mainCS"), SF_Compute);
+#if FX_CAS_FP16_ENABLED
 IMPLEMENT_SHADER_TYPE(template<> FIDELITYFXCAS_API, TFidelityFXCASShaderCS_RDG_FP16_Upscale,     TEXT("/Plugin/FidelityFXCAS/Private/CAS_ShaderCS.usf"), TEXT("mainCS"), SF_Compute);
 IMPLEMENT_SHADER_TYPE(template<> FIDELITYFXCAS_API, TFidelityFXCASShaderCS_RDG_FP16_SharpenOnly, TEXT("/Plugin/FidelityFXCAS/Private/CAS_ShaderCS.usf"), TEXT("mainCS"), SF_Compute);
+#endif // FX_CAS_FP16_ENABLED
 
 bool FFidelityFXCASShaderCS_RDG::ShouldCompilePermutation(const FGlobalShaderPermutationParameters& Parameters)
 {
@@ -70,7 +76,7 @@ void FFidelityFXCASShaderCS_RDG::ModifyCompilationEnvironment(const FGlobalShade
 template<bool FP16, bool SHARPEN_ONLY>
 bool TFidelityFXCASShaderCS_RDG<FP16, SHARPEN_ONLY>::ShouldCompilePermutation(const FGlobalShaderPermutationParameters& Parameters)
 {
-	return FFidelityFXCASShaderCS_RDG::ShouldCompilePermutation(Parameters);
+	return FFidelityFXCASShaderCompilationRules::ShouldCompilePermutationCS<FP16>(Parameters);
 }
 
 template<bool FP16, bool SHARPEN_ONLY>

@@ -61,8 +61,11 @@ public class FidelityFXCAS : ModuleRules
 				// ... add any modules that your module loads dynamically here ...
 			});
 
-		// So far FX CAS only works on Windows
-		if (Target.Platform == UnrealTargetPlatform.Win64)
+        // Enable / disable whole plugin depenging on the platform
+        // NOTE: If you change this rule, you may also need to update the
+        // FFidelityFXCASShaderCompilationRules::ShouldCompilePermutation method
+        if (Target.Platform == UnrealTargetPlatform.Win64
+			|| Target.Platform == UnrealTargetPlatform.XboxOne)
 		{
 			PublicDefinitions.Add("FX_CAS_PLUGIN_ENABLED=1");
 		}
@@ -73,7 +76,21 @@ public class FidelityFXCAS : ModuleRules
 			PublicDefinitions.Add("FX_CAS_PLUGIN_ENABLED=0");
 		}
 
-		// Change the following to 1 to enable upscaling, after you've modified the UE sources by adding upscale callback
-		PublicDefinitions.Add("FX_CAS_CUSTOM_UPSCALE_CALLBACK=1");
+        // Enable the FP16 compute shader version depenging on the platform
+        // NOTE: If you change this rule, you may also need to update the
+        // FFidelityFXCASShaderCompilationRules::ShouldCompilePermutationCS method
+        if (Target.Platform == UnrealTargetPlatform.Win64)	// FP16 doesn't cook on XboxOne
+        {
+            PublicDefinitions.Add("FX_CAS_FP16_ENABLED=1");
+        }
+        else
+        {
+            // The plugin will still compile, but with dummy method stubs to prevent possible compilation errors
+            // in other places in the code or in blueprints
+            PublicDefinitions.Add("FX_CAS_FP16_ENABLED=0");
+        }
+
+        // Change the following to 1 to enable upscaling, after you've modified the UE sources by adding upscale callback
+        PublicDefinitions.Add("FX_CAS_CUSTOM_UPSCALE_CALLBACK=0");
 	}
 }

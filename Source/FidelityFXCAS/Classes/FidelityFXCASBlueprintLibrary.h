@@ -12,6 +12,13 @@ class UFidelityFXCASBlueprintLibrary : public UBlueprintFunctionLibrary
 	GENERATED_UCLASS_BODY()
 
 	//-------------------------------------------------------------------------------------------------
+	// General plugin methods
+	//-------------------------------------------------------------------------------------------------
+
+	UFUNCTION(BlueprintCallable, Category = "FidelityFX | CAS")
+	static bool IsPluginEnabledOnCurrentPlatform();
+
+	//-------------------------------------------------------------------------------------------------
 	// Screen space CAS
 	//-------------------------------------------------------------------------------------------------
 

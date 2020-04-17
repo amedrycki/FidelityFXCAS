@@ -48,6 +48,7 @@ static TAutoConsoleVariable<float> CVarFidelityFXCAS_SSCASSharpness(
 	TEXT("1: maximum (higher ringing)"),
 	ECVF_Cheat);
 
+#if FX_CAS_FP16_ENABLED
 static TAutoConsoleVariable<bool> CVarFidelityFXCAS_SSCASFP16(
 	TEXT("r.fxcas.SSCASFP16"),
 	0,
@@ -55,6 +56,7 @@ static TAutoConsoleVariable<bool> CVarFidelityFXCAS_SSCASFP16(
 	TEXT("0: OFF (normal precision)\n")
 	TEXT("1: ON (half precision)"),
 	ECVF_Cheat);
+#endif // FX_CAS_FP16_ENABLED
 
 // Sink to track console variables value changes
 static void FidelityFXCASCVarSink()
@@ -118,6 +120,7 @@ static void FidelityFXCASCVarSink()
 		GSSCASSharpness = NewSSCASSharpness;
 	}
 
+#if FX_CAS_FP16_ENABLED
 	// SS CAS half precision
 	static bool GSSCASFP16 = false;
 	bool bNewSSCASFP16 = CVarFidelityFXCAS_SSCASFP16.GetValueOnGameThread();
@@ -126,6 +129,7 @@ static void FidelityFXCASCVarSink()
 		FFidelityFXCASModule::Get().SetUseFP16(bNewSSCASFP16);
 		GSSCASFP16 = bNewSSCASFP16;
 	}
+#endif // FX_CAS_FP16_ENABLED
 
 	// Screen percentage
 	static const TConsoleVariableData<float>* CVarScreenPercentage = IConsoleManager::Get().FindTConsoleVariableDataFloat(TEXT("r.ScreenPercentage"));
@@ -250,13 +254,13 @@ void FFidelityFXCASModule::SetSSCASSharpness(float Sharpness)
 
 void FFidelityFXCASModule::SetUseFP16(bool UseFP16)
 {
-#if FX_CAS_PLUGIN_ENABLED
+#if FX_CAS_PLUGIN_ENABLED && FX_CAS_FP16_ENABLED
 	if (UseFP16 != bUseFP16)
 	{
 		bUseFP16 = UseFP16;
 		CVarFidelityFXCAS_SSCASFP16->Set(UseFP16);
 	}
-#endif // FX_CAS_PLUGIN_ENABLED
+#endif // FX_CAS_PLUGIN_ENABLED && FX_CAS_FP16_ENABLED
 }
 
 #if FX_CAS_PLUGIN_ENABLED
@@ -414,21 +418,26 @@ void FFidelityFXCASModule::RunComputeShader_RHI_RenderThread(FRHICommandListImme
 
 	// Choose shader version and dispatch
 	bool SharpenOnly = (CASPassParams.GetInputSize() == CASPassParams.GetOutputSize());
+#if FX_CAS_FP16_ENABLED
 	if (CASPassParams.bUseFP16 && SharpenOnly)
 	{
 		TShaderMapRef<TFidelityFXCASShaderCS_RHI_FP16_SharpenOnly> ComputeShader(GetGlobalShaderMap(GMaxRHIFeatureLevel));
 		FComputeShaderUtils::Dispatch(RHICmdList, *ComputeShader, PassParameters, GetDispatchGroupCount(CASPassParams.GetOutputSize()));
 	}
-	else if (SharpenOnly)
+	else
+#endif // FX_CAS_FP16_ENABLED
+	if (SharpenOnly)
 	{
 		TShaderMapRef<TFidelityFXCASShaderCS_RHI_FP32_SharpenOnly> ComputeShader(GetGlobalShaderMap(GMaxRHIFeatureLevel));
 		FComputeShaderUtils::Dispatch(RHICmdList, *ComputeShader, PassParameters, GetDispatchGroupCount(CASPassParams.GetOutputSize()));
 	}
+#if FX_CAS_FP16_ENABLED
 	else if (CASPassParams.bUseFP16)
 	{
 		TShaderMapRef<TFidelityFXCASShaderCS_RHI_FP16_Upscale> ComputeShader(GetGlobalShaderMap(GMaxRHIFeatureLevel));
 		FComputeShaderUtils::Dispatch(RHICmdList, *ComputeShader, PassParameters, GetDispatchGroupCount(CASPassParams.GetOutputSize()));
 	}
+#endif // FX_CAS_FP16_ENABLED
 	else
 	{
 		TShaderMapRef<TFidelityFXCASShaderCS_RHI_FP32_Upscale> ComputeShader(GetGlobalShaderMap(GMaxRHIFeatureLevel));
@@ -455,6 +464,7 @@ void FFidelityFXCASModule::RunComputeShader_RDG_RenderThread(FRDGBuilder& GraphB
 
 	// Choose shader version and dispatch
 	bool SharpenOnly = (CASPassParams.GetInputSize() == CASPassParams.GetOutputSize());
+#if FX_CAS_FP16_ENABLED
 	if (CASPassParams.bUseFP16 && SharpenOnly)
 	{
 		TShaderMapRef<TFidelityFXCASShaderCS_RDG<true, true>> ComputeShader(GetGlobalShaderMap(GMaxRHIFeatureLevel));
@@ -462,13 +472,16 @@ void FFidelityFXCASModule::RunComputeShader_RDG_RenderThread(FRDGBuilder& GraphB
 			RDG_EVENT_NAME("Upscale CS %dx%d -> %dx%d", CASPassParams.GetInputSize().X, CASPassParams.GetInputSize().Y, CASPassParams.GetOutputSize().X, CASPassParams.GetOutputSize().Y),
 			*ComputeShader, PassParameters, GetDispatchGroupCount(CASPassParams.GetOutputSize()));
 	}
-	else if (SharpenOnly)
+	else
+#endif // FX_CAS_FP16_ENABLED
+	if (SharpenOnly)
 	{
 		TShaderMapRef<TFidelityFXCASShaderCS_RDG<false, true>> ComputeShader(GetGlobalShaderMap(GMaxRHIFeatureLevel));
 		FComputeShaderUtils::AddPass(GraphBuilder,
 			RDG_EVENT_NAME("Upscale CS %dx%d -> %dx%d", CASPassParams.GetInputSize().X, CASPassParams.GetInputSize().Y, CASPassParams.GetOutputSize().X, CASPassParams.GetOutputSize().Y),
 			*ComputeShader, PassParameters, GetDispatchGroupCount(CASPassParams.GetOutputSize()));
 	}
+#if FX_CAS_FP16_ENABLED
 	else if (CASPassParams.bUseFP16)
 	{
 		TShaderMapRef<TFidelityFXCASShaderCS_RDG<true, false>> ComputeShader(GetGlobalShaderMap(GMaxRHIFeatureLevel));
@@ -476,6 +489,7 @@ void FFidelityFXCASModule::RunComputeShader_RDG_RenderThread(FRDGBuilder& GraphB
 			RDG_EVENT_NAME("Upscale CS %dx%d -> %dx%d", CASPassParams.GetInputSize().X, CASPassParams.GetInputSize().Y, CASPassParams.GetOutputSize().X, CASPassParams.GetOutputSize().Y),
 			*ComputeShader, PassParameters, GetDispatchGroupCount(CASPassParams.GetOutputSize()));
 	}
+#endif // FX_CAS_FP16_ENABLED
 	else
 	{
 		TShaderMapRef<TFidelityFXCASShaderCS_RDG<false, false>> ComputeShader(GetGlobalShaderMap(GMaxRHIFeatureLevel));

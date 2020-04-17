@@ -22,5 +22,5 @@
 			"LoadingPhase": "PostConfigInit"
 		}
 	],
-	"SupportedTargetPlatforms": [ "Win64" ]
+	"SupportedTargetPlatforms": [ "Win64", "XboxOne" ]
 }

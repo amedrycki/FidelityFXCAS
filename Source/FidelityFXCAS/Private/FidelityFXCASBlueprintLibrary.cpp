@@ -27,6 +27,11 @@ UFidelityFXCASBlueprintLibrary::UFidelityFXCASBlueprintLibrary(const FObjectInit
 {
 }
 
+bool UFidelityFXCASBlueprintLibrary::IsPluginEnabledOnCurrentPlatform()
+{
+	return FFidelityFXCASModule::Get().IsEnabledOnCurrentPlatform();
+}
+
 bool UFidelityFXCASBlueprintLibrary::GetIsSSCASEnabled()
 {
 	return FFidelityFXCASModule::Get().GetIsSSCASEnabled();
@@ -125,7 +130,11 @@ void UFidelityFXCASBlueprintLibrary::DrawToRenderTarget(class UTextureRenderTarg
 			// Prepare pass parameters
 			FFidelityFXCASPassParams_RHI CASPassParams(InputTexture, RTResource->TextureRHI, GFXCASGetCSOutput(InOutputRenderTarget));
 			CASPassParams.Sharpness = FMath::Clamp(InSharpness, 0.0f, 1.0f);
+#if FX_CAS_FP16_ENABLED
 			CASPassParams.bUseFP16 = InUseFP16;
+#else
+			CASPassParams.bUseFP16 = false;	// Disregard the parameter
+#endif
 
 			// Make sure the computer shader output is ready and has the correct size
 			FFidelityFXCASModule::Get().PrepareComputeShaderOutput_RenderThread(RHICmdList, CASPassParams.GetOutputSize(), CASPassParams.CSOutput);
