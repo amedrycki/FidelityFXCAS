@@ -26,6 +26,7 @@ bool FFidelityFXCASShaderCS_RHI::ShouldCompilePermutation(const FGlobalShaderPer
 void FFidelityFXCASShaderCS_RHI::ModifyCompilationEnvironment(const FGlobalShaderPermutationParameters& Parameters, FShaderCompilerEnvironment& OutEnvironment)
 {
 	FGlobalShader::ModifyCompilationEnvironment(Parameters, OutEnvironment);
+	OutEnvironment.SetDefine(TEXT("PLATFORM_PS4"), Parameters.Platform == EShaderPlatform::SP_PS4 ? 1 : 0);
 	OutEnvironment.SetDefine(TEXT("WIDTH"), 64);
 	OutEnvironment.SetDefine(TEXT("HEIGHT"), 1);
 	OutEnvironment.SetDefine(TEXT("DEPTH"),  1);
@@ -68,6 +69,7 @@ bool FFidelityFXCASShaderCS_RDG::ShouldCompilePermutation(const FGlobalShaderPer
 void FFidelityFXCASShaderCS_RDG::ModifyCompilationEnvironment(const FGlobalShaderPermutationParameters& Parameters, FShaderCompilerEnvironment& OutEnvironment)
 {
 	FGlobalShader::ModifyCompilationEnvironment(Parameters, OutEnvironment);
+	OutEnvironment.SetDefine(TEXT("PLATFORM_PS4"), Parameters.Platform == EShaderPlatform::SP_PS4 ? 1 : 0);
 	OutEnvironment.SetDefine(TEXT("WIDTH"), 64);
 	OutEnvironment.SetDefine(TEXT("HEIGHT"), 1);
 	OutEnvironment.SetDefine(TEXT("DEPTH"), 1);

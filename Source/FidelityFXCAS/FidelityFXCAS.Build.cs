@@ -65,7 +65,8 @@ public class FidelityFXCAS : ModuleRules
         // NOTE: If you change this rule, you may also need to update the
         // FFidelityFXCASShaderCompilationRules::ShouldCompilePermutation method
         if (Target.Platform == UnrealTargetPlatform.Win64
-			|| Target.Platform == UnrealTargetPlatform.XboxOne)
+			|| Target.Platform == UnrealTargetPlatform.XboxOne
+			|| Target.Platform == UnrealTargetPlatform.PS4)
 		{
 			PublicDefinitions.Add("FX_CAS_PLUGIN_ENABLED=1");
 		}

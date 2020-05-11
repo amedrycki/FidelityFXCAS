@@ -28,6 +28,11 @@ public:
 	{
 		return FFidelityFXCASShaderCompilationRules::ShouldCompilePermutation(Parameters);
 	}
+	static void ModifyCompilationEnvironment(const FGlobalShaderPermutationParameters& Parameters, FShaderCompilerEnvironment& OutEnvironment)
+	{
+		FGlobalShader::ModifyCompilationEnvironment(Parameters, OutEnvironment);
+		OutEnvironment.SetDefine(TEXT("PLATFORM_PS4"), Parameters.Platform == EShaderPlatform::SP_PS4 ? 1 : 0);
+	}
 };
 
 IMPLEMENT_GLOBAL_SHADER(FFidelityFXCASShaderPS_RHI, "/Plugin/FidelityFXCAS/Private/CAS_ShaderPS.usf", "mainPS", SF_Pixel);
@@ -53,6 +58,11 @@ public:
 	static bool ShouldCompilePermutation(const FGlobalShaderPermutationParameters& Parameters)
 	{
 		return FFidelityFXCASShaderCompilationRules::ShouldCompilePermutation(Parameters);
+	}
+	static void ModifyCompilationEnvironment(const FGlobalShaderPermutationParameters& Parameters, FShaderCompilerEnvironment& OutEnvironment)
+	{
+		FGlobalShader::ModifyCompilationEnvironment(Parameters, OutEnvironment);
+		OutEnvironment.SetDefine(TEXT("PLATFORM_PS4"), Parameters.Platform == EShaderPlatform::SP_PS4 ? 1 : 0);
 	}
 };
 
