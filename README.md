@@ -13,7 +13,7 @@ This plugin provides an implementation of Fidelity FX Contrast Adaptive Sharpeni
 > CAS was designed to help increase the quality of existing Temporal Anti-Aliasing (TAA) solutions. TAA often introduces a variable amount of blur due to temporal feedback. The adaptive sharpening provided by CAS is ideal to restore detail in images produced after TAA .
 > CAS’ optional scaling capability is designed to support Dynamic Resolution Scaling (DRS). DRS changes render resolution every frame, which requires scaling prior to compositing the fixed-resolution User Interface (UI). CAS supports both up-sampling and down-sampling in the same single pass that applies sharpening.
 
-Source: [https://gpuopen.com/gaming-product/fidelityfx/](https://gpuopen.com/gaming-product/fidelityfx/)
+Source: [https://gpuopen.com/fidelityfx-cas/](https://gpuopen.com/fidelityfx-cas/)
 
 ## Example screenshots
 View in full resolution for the differences to be fully visible.
