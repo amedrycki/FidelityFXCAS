@@ -234,7 +234,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 # References and reading resources:
-- More info about Fidelity FX and CAS: [https://gpuopen.com/gaming-product/fidelityfx/](https://gpuopen.com/gaming-product/fidelityfx/)
+- More info about Fidelity FX and CAS: [https://gpuopen.com/effects/](https://gpuopen.com/effects/)
 - UE Screen Percentage with Temporal Upsample overview: [https://docs.unrealengine.com/en-US/Engine/Rendering/ScreenPercentage/index.html](https://docs.unrealengine.com/en-US/Engine/Rendering/ScreenPercentage/index.html)
 - UE RDG 101 A Crash Course presentation: [https://epicgames.ent.box.com/s/ul1h44ozs0t2850ug0hrohlzm53kxwrz](https://epicgames.ent.box.com/s/ul1h44ozs0t2850ug0hrohlzm53kxwrz)
 - UE Overview Shader in Plugins (for UE v4.17): [https://docs.unrealengine.com/en-US/Programming/Rendering/ShaderInPlugin/Overview/index.html](https://docs.unrealengine.com/en-US/Programming/Rendering/ShaderInPlugin/Overview/index.html)
