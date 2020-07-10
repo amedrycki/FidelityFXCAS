@@ -3,13 +3,15 @@
 
 #include "FidelityFXCASShaderCS.h"
 #include "FidelityFXCASShaderCompilationRules.h"
+#include "Misc/EngineVersionComparison.h"
 
 //-------------------------------------------------------------------------------------------------
 // RHI Version
 //-------------------------------------------------------------------------------------------------
 
-// Do not implement the base shader as it's missing the necessary defines anyway
-//IMPLEMENT_SHADER_TYPE(FIDELITYFXCAS_API, FFidelityFXCASShaderCS_RHI, TEXT("/Plugin/FidelityFXCAS/Private/CAS_ShaderCS.usf"), TEXT("mainCS"), SF_Compute);
+#if !UE_VERSION_OLDER_THAN(4, 25, 0)	// UE v4.25
+IMPLEMENT_TYPE_LAYOUT(FFidelityFXCASShaderCS_RHI);
+#endif	// UE v4.25
 
 IMPLEMENT_SHADER_TYPE(template<> FIDELITYFXCAS_API, TFidelityFXCASShaderCS_RHI_FP32_Upscale,     TEXT("/Plugin/FidelityFXCAS/Private/CAS_ShaderCS.usf"), TEXT("mainCS"), SF_Compute);
 IMPLEMENT_SHADER_TYPE(template<> FIDELITYFXCAS_API, TFidelityFXCASShaderCS_RHI_FP32_SharpenOnly, TEXT("/Plugin/FidelityFXCAS/Private/CAS_ShaderCS.usf"), TEXT("mainCS"), SF_Compute);
@@ -51,8 +53,9 @@ void TFidelityFXCASShaderCS_RHI<FP16, SHARPEN_ONLY>::ModifyCompilationEnvironmen
 // RDG Version
 //-------------------------------------------------------------------------------------------------
 
-// Do not implement the base shader as it's missing the necessary defines anyway
-//IMPLEMENT_SHADER_TYPE(FIDELITYFXCAS_API, FFidelityFXCASShaderCS_RDG, TEXT("/Plugin/FidelityFXCAS/Private/CAS_ShaderCS.usf"), TEXT("mainCS"), SF_Compute);
+#if !UE_VERSION_OLDER_THAN(4, 25, 0)	// UE v4.25
+IMPLEMENT_TYPE_LAYOUT(FFidelityFXCASShaderCS_RDG);
+#endif	// UE v4.25
 
 IMPLEMENT_SHADER_TYPE(template<> FIDELITYFXCAS_API, TFidelityFXCASShaderCS_RDG_FP32_Upscale,     TEXT("/Plugin/FidelityFXCAS/Private/CAS_ShaderCS.usf"), TEXT("mainCS"), SF_Compute);
 IMPLEMENT_SHADER_TYPE(template<> FIDELITYFXCAS_API, TFidelityFXCASShaderCS_RDG_FP32_SharpenOnly, TEXT("/Plugin/FidelityFXCAS/Private/CAS_ShaderCS.usf"), TEXT("mainCS"), SF_Compute);
