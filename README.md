@@ -49,7 +49,7 @@ To add the plugin to your project:
 This step is only required to enable the CAS screen space upsampling plugin functionality. If you skip this step you may still use other plugin functionalities.
 Unreal Engine v4.24 does not provide any means to replace the default upsampling pipeline with your custom algorithms. Therefore to add the callback for the plugin to use the following changes in 3 engine source code files are required.
 
-In the file `Engine/Source/Runtime/RenderCore/Public/RendererInterface.h` in line **748** add a delegate declaration and a callback accessor:
+In the file `Engine/Source/Runtime/RenderCore/Public/RendererInterface.h` in line **748** (UE v4.24) or **750** (UE v4.25) add a delegate declaration and a callback accessor:
 ```diff
    /** Calls registered post resolve delegates, if any */
    virtual void RenderPostResolvedSceneColorExtension(FRHICommandListImmediate& RHICmdList, class FSceneRenderTargets& SceneContext) = 0;
@@ -65,7 +65,7 @@ In the file `Engine/Source/Runtime/RenderCore/Public/RendererInterface.h` in lin
    virtual IAllocatedVirtualTexture* AllocateVirtualTexture(const FAllocatedVTDescription& Desc) = 0;
 ```
 
-In the file `Engine/Source/Runtime/Renderer/Private/RendererModule.h` add the callback accessor definition in line **97** and delegate member variable in line **115**:
+In the file `Engine/Source/Runtime/Renderer/Private/RendererModule.h` add the callback accessor definition in line **97** (UE v4.24) or **96** (UE v4.25) and delegate member variable in line **115** (UE v4.24) or **117** (UE v4.25):
 ```diff
 
    virtual void RenderPostResolvedSceneColorExtension(FRHICommandListImmediate& RHICmdList, class FSceneRenderTargets& SceneContext) override;
@@ -92,7 +92,7 @@ In the file `Engine/Source/Runtime/Renderer/Private/RendererModule.h` add the ca
  extern ICustomCulling* GCustomCullingImpl;
 ```
 
-In the file `Engine/Source/Runtime/Renderer/Private/PostProcess/PostProcessUpscale.cpp` add `EngineModule.h` include in line **5** and call the callback in line **200**:
+In the file `Engine/Source/Runtime/Renderer/Private/PostProcess/PostProcessUpscale.cpp` add `EngineModule.h` include in line **5** and call the callback in line **200** (UE 4.24) or **199** (UE 4.25):
 
 ```diff
  #include "PostProcess/PostProcessUpscale.h"
