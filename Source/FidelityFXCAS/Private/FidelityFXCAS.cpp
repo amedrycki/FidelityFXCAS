@@ -489,7 +489,12 @@ void FFidelityFXCASModule::RunComputeShader_RDG_RenderThread(FRDGBuilder& GraphB
 		TShaderMapRef<TFidelityFXCASShaderCS_RDG<true, true>> ComputeShader(GetGlobalShaderMap(GMaxRHIFeatureLevel));
 		FComputeShaderUtils::AddPass(GraphBuilder,
 			RDG_EVENT_NAME("Upscale CS %dx%d -> %dx%d", CASPassParams.GetInputSize().X, CASPassParams.GetInputSize().Y, CASPassParams.GetOutputSize().X, CASPassParams.GetOutputSize().Y),
-			*ComputeShader, PassParameters, GetDispatchGroupCount(CASPassParams.GetOutputSize()));
+#if UE_VERSION_OLDER_THAN(4, 25, 0)	// UE v4.24
+			*ComputeShader,
+#else
+			ComputeShader,
+#endif	// UE v4.24
+			PassParameters, GetDispatchGroupCount(CASPassParams.GetOutputSize()));
 	}
 	else
 #endif // FX_CAS_FP16_ENABLED
@@ -498,7 +503,12 @@ void FFidelityFXCASModule::RunComputeShader_RDG_RenderThread(FRDGBuilder& GraphB
 		TShaderMapRef<TFidelityFXCASShaderCS_RDG<false, true>> ComputeShader(GetGlobalShaderMap(GMaxRHIFeatureLevel));
 		FComputeShaderUtils::AddPass(GraphBuilder,
 			RDG_EVENT_NAME("Upscale CS %dx%d -> %dx%d", CASPassParams.GetInputSize().X, CASPassParams.GetInputSize().Y, CASPassParams.GetOutputSize().X, CASPassParams.GetOutputSize().Y),
-			*ComputeShader, PassParameters, GetDispatchGroupCount(CASPassParams.GetOutputSize()));
+#if UE_VERSION_OLDER_THAN(4, 25, 0)	// UE v4.24
+			*ComputeShader,
+#else
+			ComputeShader,
+#endif	// UE v4.24
+			PassParameters, GetDispatchGroupCount(CASPassParams.GetOutputSize()));
 	}
 #if FX_CAS_FP16_ENABLED
 	else if (CASPassParams.bUseFP16)
@@ -506,7 +516,12 @@ void FFidelityFXCASModule::RunComputeShader_RDG_RenderThread(FRDGBuilder& GraphB
 		TShaderMapRef<TFidelityFXCASShaderCS_RDG<true, false>> ComputeShader(GetGlobalShaderMap(GMaxRHIFeatureLevel));
 		FComputeShaderUtils::AddPass(GraphBuilder,
 			RDG_EVENT_NAME("Upscale CS %dx%d -> %dx%d", CASPassParams.GetInputSize().X, CASPassParams.GetInputSize().Y, CASPassParams.GetOutputSize().X, CASPassParams.GetOutputSize().Y),
-			*ComputeShader, PassParameters, GetDispatchGroupCount(CASPassParams.GetOutputSize()));
+#if UE_VERSION_OLDER_THAN(4, 25, 0)	// UE v4.24
+			*ComputeShader,
+#else
+			ComputeShader,
+#endif	// UE v4.24
+			PassParameters, GetDispatchGroupCount(CASPassParams.GetOutputSize()));
 	}
 #endif // FX_CAS_FP16_ENABLED
 	else
@@ -514,7 +529,12 @@ void FFidelityFXCASModule::RunComputeShader_RDG_RenderThread(FRDGBuilder& GraphB
 		TShaderMapRef<TFidelityFXCASShaderCS_RDG<false, false>> ComputeShader(GetGlobalShaderMap(GMaxRHIFeatureLevel));
 		FComputeShaderUtils::AddPass(GraphBuilder,
 			RDG_EVENT_NAME("Upscale CS %dx%d -> %dx%d", CASPassParams.GetInputSize().X, CASPassParams.GetInputSize().Y, CASPassParams.GetOutputSize().X, CASPassParams.GetOutputSize().Y),
-			*ComputeShader, PassParameters, GetDispatchGroupCount(CASPassParams.GetOutputSize()));
+#if UE_VERSION_OLDER_THAN(4, 25, 0)	// UE v4.24
+			*ComputeShader,
+#else
+			ComputeShader,
+#endif	// UE v4.24
+			PassParameters, GetDispatchGroupCount(CASPassParams.GetOutputSize()));
 	}
 }
 #endif // FX_CAS_CUSTOM_UPSCALE_CALLBACK
