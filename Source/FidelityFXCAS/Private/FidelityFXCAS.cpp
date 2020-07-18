@@ -415,9 +415,9 @@ void FFidelityFXCASModule::RunComputeShader_RHI_RenderThread(FRHICommandListImme
 	QUICK_SCOPE_CYCLE_COUNTER(STAT_FidelityFXCASModule_RunComputeShader_RHI); // Used to gather CPU profiling data for the UE4 session frontend
 	SCOPED_DRAW_EVENT(RHICmdList, FidelityFXCASModule_RunComputeShader_RHI);  // Used to profile GPU activity and add metadata to be consumed by for example RenderDoc
 
-#if UE_VERSION_OLDER_THAN(4, 25, 0)	// UE v4.24
+	PRAGMA_DISABLE_DEPRECATION_WARNINGS
 	UnbindRenderTargets(RHICmdList);
-#endif	// UE v4.24
+	PRAGMA_ENABLE_DEPRECATION_WARNINGS
 	RHICmdList.TransitionResource(EResourceTransitionAccess::ERWBarrier, EResourceTransitionPipeline::EGfxToCompute, CASPassParams.GetUAV());
 
 	// Setup shader parameters
@@ -466,9 +466,9 @@ void FFidelityFXCASModule::RunComputeShader_RDG_RenderThread(FRDGBuilder& GraphB
 	QUICK_SCOPE_CYCLE_COUNTER(STAT_FidelityFXCASModule_RunComputeShader_RDG);             // Used to gather CPU profiling data for the UE4 session frontend
 	SCOPED_DRAW_EVENT(GraphBuilder.RHICmdList, FidelityFXCASModule_RunComputeShader_RDG); // Used to profile GPU activity and add metadata to be consumed by for example RenderDoc
 
-#if UE_VERSION_OLDER_THAN(4, 25, 0)	// UE v4.24
+	PRAGMA_DISABLE_DEPRECATION_WARNINGS
 	UnbindRenderTargets(GraphBuilder.RHICmdList);
-#endif	// UE v4.24
+	PRAGMA_ENABLE_DEPRECATION_WARNINGS
 	GraphBuilder.RHICmdList.TransitionResource(EResourceTransitionAccess::ERWBarrier, EResourceTransitionPipeline::EGfxToCompute, CASPassParams.GetUAV());
 
 	// Setup shader parameters
