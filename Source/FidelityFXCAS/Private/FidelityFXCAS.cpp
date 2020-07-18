@@ -21,6 +21,16 @@
 
 #define LOCTEXT_NAMESPACE "FFidelityFXCASModule"
 
+#if UE_VERSION_OLDER_THAN(4, 25, 0)	// UE v4.24
+	#define FXCAS_SHADER_ARG(shader) (*shader)
+	#define FXCAS_GET_PS(shader) GETSAFERHISHADER_PIXEL(*shader)
+	#define FXCAS_GET_VS(shader) GETSAFERHISHADER_VERTEX(*shader)
+#else
+	#define FXCAS_SHADER_ARG(shader) (shader)
+	#define FXCAS_GET_PS(shader) (shader.GetPixelShader())
+	#define FXCAS_GET_VS(shader) (shader.GetVertexShader())
+#endif	// UE v4.24
+
 //-------------------------------------------------------------------------------------------------
 // Console variables
 //-------------------------------------------------------------------------------------------------
@@ -405,9 +415,9 @@ void FFidelityFXCASModule::RunComputeShader_RHI_RenderThread(FRHICommandListImme
 	QUICK_SCOPE_CYCLE_COUNTER(STAT_FidelityFXCASModule_RunComputeShader_RHI); // Used to gather CPU profiling data for the UE4 session frontend
 	SCOPED_DRAW_EVENT(RHICmdList, FidelityFXCASModule_RunComputeShader_RHI);  // Used to profile GPU activity and add metadata to be consumed by for example RenderDoc
 
-	PRAGMA_DISABLE_DEPRECATION_WARNINGS
+#if UE_VERSION_OLDER_THAN(4, 25, 0)	// UE v4.24
 	UnbindRenderTargets(RHICmdList);
-	PRAGMA_ENABLE_DEPRECATION_WARNINGS
+#endif	// UE v4.24
 	RHICmdList.TransitionResource(EResourceTransitionAccess::ERWBarrier, EResourceTransitionPipeline::EGfxToCompute, CASPassParams.GetUAV());
 
 	// Setup shader parameters
@@ -425,42 +435,26 @@ void FFidelityFXCASModule::RunComputeShader_RHI_RenderThread(FRHICommandListImme
 	if (CASPassParams.bUseFP16 && SharpenOnly)
 	{
 		TShaderMapRef<TFidelityFXCASShaderCS_RHI_FP16_SharpenOnly> ComputeShader(GetGlobalShaderMap(GMaxRHIFeatureLevel));
-#if UE_VERSION_OLDER_THAN(4, 25, 0)	// UE v4.24
-		FComputeShaderUtils::Dispatch(RHICmdList, *ComputeShader, PassParameters, GetDispatchGroupCount(CASPassParams.GetOutputSize()));
-#else
-		FComputeShaderUtils::Dispatch(RHICmdList, ComputeShader, PassParameters, GetDispatchGroupCount(CASPassParams.GetOutputSize()));
-#endif	// UE v4.24
+		FComputeShaderUtils::Dispatch(RHICmdList, FXCAS_SHADER_ARG(ComputeShader), PassParameters, GetDispatchGroupCount(CASPassParams.GetOutputSize()));
 	}
 	else
 #endif // FX_CAS_FP16_ENABLED
 	if (SharpenOnly)
 	{
 		TShaderMapRef<TFidelityFXCASShaderCS_RHI_FP32_SharpenOnly> ComputeShader(GetGlobalShaderMap(GMaxRHIFeatureLevel));
-#if UE_VERSION_OLDER_THAN(4, 25, 0)	// UE v4.24
-		FComputeShaderUtils::Dispatch(RHICmdList, *ComputeShader, PassParameters, GetDispatchGroupCount(CASPassParams.GetOutputSize()));
-#else
-		FComputeShaderUtils::Dispatch(RHICmdList, ComputeShader, PassParameters, GetDispatchGroupCount(CASPassParams.GetOutputSize()));
-#endif	// UE v4.24
+		FComputeShaderUtils::Dispatch(RHICmdList, FXCAS_SHADER_ARG(ComputeShader), PassParameters, GetDispatchGroupCount(CASPassParams.GetOutputSize()));
 	}
 #if FX_CAS_FP16_ENABLED
 	else if (CASPassParams.bUseFP16)
 	{
 		TShaderMapRef<TFidelityFXCASShaderCS_RHI_FP16_Upscale> ComputeShader(GetGlobalShaderMap(GMaxRHIFeatureLevel));
-#if UE_VERSION_OLDER_THAN(4, 25, 0)	// UE v4.24
-		FComputeShaderUtils::Dispatch(RHICmdList, *ComputeShader, PassParameters, GetDispatchGroupCount(CASPassParams.GetOutputSize()));
-#else
-		FComputeShaderUtils::Dispatch(RHICmdList, ComputeShader, PassParameters, GetDispatchGroupCount(CASPassParams.GetOutputSize()));
-#endif	// UE v4.24
+		FComputeShaderUtils::Dispatch(RHICmdList, FXCAS_SHADER_ARG(ComputeShader), PassParameters, GetDispatchGroupCount(CASPassParams.GetOutputSize()));
 	}
 #endif // FX_CAS_FP16_ENABLED
 	else
 	{
 		TShaderMapRef<TFidelityFXCASShaderCS_RHI_FP32_Upscale> ComputeShader(GetGlobalShaderMap(GMaxRHIFeatureLevel));
-#if UE_VERSION_OLDER_THAN(4, 25, 0)	// UE v4.24
-		FComputeShaderUtils::Dispatch(RHICmdList, *ComputeShader, PassParameters, GetDispatchGroupCount(CASPassParams.GetOutputSize()));
-#else
-		FComputeShaderUtils::Dispatch(RHICmdList, ComputeShader, PassParameters, GetDispatchGroupCount(CASPassParams.GetOutputSize()));
-#endif	// UE v4.24
+		FComputeShaderUtils::Dispatch(RHICmdList, FXCAS_SHADER_ARG(ComputeShader), PassParameters, GetDispatchGroupCount(CASPassParams.GetOutputSize()));
 	}
 }
 
@@ -489,12 +483,7 @@ void FFidelityFXCASModule::RunComputeShader_RDG_RenderThread(FRDGBuilder& GraphB
 		TShaderMapRef<TFidelityFXCASShaderCS_RDG<true, true>> ComputeShader(GetGlobalShaderMap(GMaxRHIFeatureLevel));
 		FComputeShaderUtils::AddPass(GraphBuilder,
 			RDG_EVENT_NAME("Upscale CS %dx%d -> %dx%d", CASPassParams.GetInputSize().X, CASPassParams.GetInputSize().Y, CASPassParams.GetOutputSize().X, CASPassParams.GetOutputSize().Y),
-#if UE_VERSION_OLDER_THAN(4, 25, 0)	// UE v4.24
-			*ComputeShader,
-#else
-			ComputeShader,
-#endif	// UE v4.24
-			PassParameters, GetDispatchGroupCount(CASPassParams.GetOutputSize()));
+			FXCAS_SHADER_ARG(ComputeShader), PassParameters, GetDispatchGroupCount(CASPassParams.GetOutputSize()));
 	}
 	else
 #endif // FX_CAS_FP16_ENABLED
@@ -503,12 +492,7 @@ void FFidelityFXCASModule::RunComputeShader_RDG_RenderThread(FRDGBuilder& GraphB
 		TShaderMapRef<TFidelityFXCASShaderCS_RDG<false, true>> ComputeShader(GetGlobalShaderMap(GMaxRHIFeatureLevel));
 		FComputeShaderUtils::AddPass(GraphBuilder,
 			RDG_EVENT_NAME("Upscale CS %dx%d -> %dx%d", CASPassParams.GetInputSize().X, CASPassParams.GetInputSize().Y, CASPassParams.GetOutputSize().X, CASPassParams.GetOutputSize().Y),
-#if UE_VERSION_OLDER_THAN(4, 25, 0)	// UE v4.24
-			*ComputeShader,
-#else
-			ComputeShader,
-#endif	// UE v4.24
-			PassParameters, GetDispatchGroupCount(CASPassParams.GetOutputSize()));
+			FXCAS_SHADER_ARG(ComputeShader), PassParameters, GetDispatchGroupCount(CASPassParams.GetOutputSize()));
 	}
 #if FX_CAS_FP16_ENABLED
 	else if (CASPassParams.bUseFP16)
@@ -516,12 +500,7 @@ void FFidelityFXCASModule::RunComputeShader_RDG_RenderThread(FRDGBuilder& GraphB
 		TShaderMapRef<TFidelityFXCASShaderCS_RDG<true, false>> ComputeShader(GetGlobalShaderMap(GMaxRHIFeatureLevel));
 		FComputeShaderUtils::AddPass(GraphBuilder,
 			RDG_EVENT_NAME("Upscale CS %dx%d -> %dx%d", CASPassParams.GetInputSize().X, CASPassParams.GetInputSize().Y, CASPassParams.GetOutputSize().X, CASPassParams.GetOutputSize().Y),
-#if UE_VERSION_OLDER_THAN(4, 25, 0)	// UE v4.24
-			*ComputeShader,
-#else
-			ComputeShader,
-#endif	// UE v4.24
-			PassParameters, GetDispatchGroupCount(CASPassParams.GetOutputSize()));
+			FXCAS_SHADER_ARG(ComputeShader), PassParameters, GetDispatchGroupCount(CASPassParams.GetOutputSize()));
 	}
 #endif // FX_CAS_FP16_ENABLED
 	else
@@ -529,12 +508,7 @@ void FFidelityFXCASModule::RunComputeShader_RDG_RenderThread(FRDGBuilder& GraphB
 		TShaderMapRef<TFidelityFXCASShaderCS_RDG<false, false>> ComputeShader(GetGlobalShaderMap(GMaxRHIFeatureLevel));
 		FComputeShaderUtils::AddPass(GraphBuilder,
 			RDG_EVENT_NAME("Upscale CS %dx%d -> %dx%d", CASPassParams.GetInputSize().X, CASPassParams.GetInputSize().Y, CASPassParams.GetOutputSize().X, CASPassParams.GetOutputSize().Y),
-#if UE_VERSION_OLDER_THAN(4, 25, 0)	// UE v4.24
-			*ComputeShader,
-#else
-			ComputeShader,
-#endif	// UE v4.24
-			PassParameters, GetDispatchGroupCount(CASPassParams.GetOutputSize()));
+			FXCAS_SHADER_ARG(ComputeShader), PassParameters, GetDispatchGroupCount(CASPassParams.GetOutputSize()));
 	}
 }
 #endif // FX_CAS_CUSTOM_UPSCALE_CALLBACK
@@ -575,21 +549,12 @@ void FFidelityFXCASModule::DrawToRenderTarget_RHI_RenderThread(FRHICommandListIm
 	GraphicsPSOInit.RasterizerState = TStaticRasterizerState<>::GetRHI();
 	GraphicsPSOInit.DepthStencilState = TStaticDepthStencilState<false, CF_Always>::GetRHI();
 	GraphicsPSOInit.BoundShaderState.VertexDeclarationRHI = GFilterVertexDeclaration.VertexDeclarationRHI;
-#if UE_VERSION_OLDER_THAN(4, 25, 0)	// UE v4.24
-	GraphicsPSOInit.BoundShaderState.VertexShaderRHI = GETSAFERHISHADER_VERTEX(*VertexShader);
-	GraphicsPSOInit.BoundShaderState.PixelShaderRHI = GETSAFERHISHADER_PIXEL(*PixelShader);
-#else
-	GraphicsPSOInit.BoundShaderState.VertexShaderRHI = VertexShader.GetVertexShader();
-	GraphicsPSOInit.BoundShaderState.PixelShaderRHI = PixelShader.GetPixelShader();
-#endif	// UE v4.24
+	GraphicsPSOInit.BoundShaderState.VertexShaderRHI = FXCAS_GET_VS(VertexShader);
+	GraphicsPSOInit.BoundShaderState.PixelShaderRHI = FXCAS_GET_PS(PixelShader);
 	GraphicsPSOInit.PrimitiveType = PT_TriangleStrip;
 	SetGraphicsPipelineState(RHICmdList, GraphicsPSOInit);
 
-#if UE_VERSION_OLDER_THAN(4, 25, 0)	// UE v4.24
-	SetShaderParameters(RHICmdList, *PixelShader, PixelShader->GetPixelShader(), PassParameters);
-#else
-	SetShaderParameters(RHICmdList, PixelShader, PixelShader.GetPixelShader(), PassParameters);
-#endif	// UE v4.24
+	SetShaderParameters(RHICmdList, FXCAS_SHADER_ARG(PixelShader), FXCAS_GET_PS(PixelShader), PassParameters);
 
 	// Draw
 	RHICmdList.SetStreamSource(0, GFidelityFXCASVertexBuffer.VertexBufferRHI, 0);
@@ -632,21 +597,12 @@ void FFidelityFXCASModule::DrawToRenderTarget_RDG_RenderThread(FRDGBuilder& Grap
 		GraphicsPSOInit.RasterizerState = TStaticRasterizerState<>::GetRHI();
 		GraphicsPSOInit.DepthStencilState = TStaticDepthStencilState<false, CF_Always>::GetRHI();
 		GraphicsPSOInit.BoundShaderState.VertexDeclarationRHI = GFilterVertexDeclaration.VertexDeclarationRHI;
-#if UE_VERSION_OLDER_THAN(4, 25, 0)	// UE v4.24
-		GraphicsPSOInit.BoundShaderState.VertexShaderRHI = GETSAFERHISHADER_VERTEX(*VertexShader);
-		GraphicsPSOInit.BoundShaderState.PixelShaderRHI = GETSAFERHISHADER_PIXEL(*PixelShader);
-#else
-		GraphicsPSOInit.BoundShaderState.VertexShaderRHI = VertexShader.GetVertexShader();
-		GraphicsPSOInit.BoundShaderState.PixelShaderRHI = PixelShader.GetPixelShader();
-#endif	// UE v4.24
+		GraphicsPSOInit.BoundShaderState.VertexShaderRHI = FXCAS_GET_VS(VertexShader);
+		GraphicsPSOInit.BoundShaderState.PixelShaderRHI = FXCAS_GET_PS(PixelShader);
 		GraphicsPSOInit.PrimitiveType = PT_TriangleStrip;
 		SetGraphicsPipelineState(RHICmdList, GraphicsPSOInit);
 
-#if UE_VERSION_OLDER_THAN(4, 25, 0)	// UE v4.24
-		SetShaderParameters(RHICmdList, *PixelShader, PixelShader->GetPixelShader(), *PassParameters);
-#else
-		SetShaderParameters(RHICmdList, PixelShader, PixelShader.GetPixelShader(), *PassParameters);
-#endif	// UE v4.24
+		SetShaderParameters(RHICmdList, FXCAS_SHADER_ARG(PixelShader), FXCAS_GET_PS(PixelShader), *PassParameters);
 
 		// Draw
 		RHICmdList.SetStreamSource(0, GFidelityFXCASVertexBuffer.VertexBufferRHI, 0);
